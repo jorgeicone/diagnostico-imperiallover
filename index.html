@@ -608,9 +608,14 @@
     </div>
 
     <div class="res-actions">
+      <button class="btn-sec" id="btn-share" onclick="shareResult()" style="background:linear-gradient(135deg,#E8401C,#c73214);color:#fff;border-color:transparent;box-shadow:0 4px 16px rgba(232,64,28,0.3);">
+        📤 Compartir en Teams
+      </button>
       <button class="btn-sec" onclick="restartQuiz()">🔄 Hacer de nuevo</button>
-      <button class="btn-sec primary" onclick="showView('intro')">🏠 Inicio</button>
     </div>
+    <p style="text-align:center;font-size:0.75rem;color:var(--t3);margin-top:12px;" id="share-hint">
+      Copia tu enlace y pégalo en el chat de Teams con <strong style="color:var(--coral2)">#MiDiagnóstico</strong>
+    </p>
   </div>
 </div>
 
@@ -640,6 +645,19 @@
           <button class="btn-del" onclick="clearAll()">🗑️ Limpiar</button>
         </div>
       </div>
+
+      <!-- IMPORT PANEL -->
+      <div class="glass" style="padding:20px 24px;margin-bottom:18px;border:1px solid rgba(232,64,28,0.25);">
+        <div class="sec-title" style="margin-bottom:12px">📥 Importar respuestas de Teams</div>
+        <p style="font-size:0.82rem;color:var(--t2);margin-bottom:12px;">
+          Pega aquí los enlaces <strong style="color:var(--coral2)">#MiDiagnóstico</strong> que compartieron los participantes en el chat (uno por línea o todo junto):
+        </p>
+        <textarea id="import-area" placeholder="Pega los enlaces aquí..." style="width:100%;height:90px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;color:var(--t1);font-size:0.82rem;padding:10px 14px;outline:none;font-family:inherit;resize:vertical;"></textarea>
+        <button onclick="importLinks()" style="margin-top:10px;padding:10px 22px;background:linear-gradient(135deg,var(--coral),#c73214);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:800;cursor:pointer;">
+          ✅ Importar respuestas
+        </button>
+      </div>
+
       <div class="stats-grid" id="admin-stats"></div>
       <div class="tbl-wrap">
         <table>
@@ -663,38 +681,61 @@
 
 <script>
 /* ══════════════════════════════════
-   BACKEND
+   STORAGE — localStorage + URL sharing
 ══════════════════════════════════ */
-const BLOB_ID = "019db47c-74be-737c-8243-be4f20161631";
-const BLOB_BASE = "https://jsonblob.com/api/jsonBlob/" + BLOB_ID;
+const STORE_KEY = "il_respuestas_v1";
 const ADMIN_PWD = "imperial2026";
 
-async function saveToCloud(record) {
+function saveLocal(record) {
+  const list = getLocal();
+  // avoid duplicates by ID
+  if (!list.find(r => r.id === record.id)) list.push(record);
+  localStorage.setItem(STORE_KEY, JSON.stringify(list));
+}
+
+function getLocal() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function encodeRecord(record) {
+  const compact = {
+    n: record.nombre, e: record.email,
+    t: record.tienda, r: record.rol,
+    s: record.score,  k: record.nivelKey,
+    m: record.modulos.map(m => m.score),
+    a: record.respuestas.join(""),
+    ts: record.timestamp, id: record.id
+  };
+  return btoa(unescape(encodeURIComponent(JSON.stringify(compact))));
+}
+
+function decodeRecord(encoded) {
   try {
-    const res = await fetch(BLOB_BASE, { headers: { Accept: "application/json" } });
-    const data = await res.json();
-    const responses = data.responses || [];
-    responses.push(record);
-    await fetch(BLOB_BASE, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify({ ...data, responses })
-    });
-    return true;
-  } catch (e) {
-    console.error("Cloud save failed:", e);
-    // fallback to localStorage
-    const local = JSON.parse(localStorage.getItem("il_backup") || "[]");
-    local.push(record);
-    localStorage.setItem("il_backup", JSON.stringify(local));
-    return false;
-  }
+    const c = JSON.parse(decodeURIComponent(escape(atob(encoded))));
+    const lvl = LVLS.find(l => l.key === c.k) || LVLS[0];
+    return {
+      id: c.id || Date.now().toString(36),
+      timestamp: c.ts || new Date().toISOString(),
+      nombre: c.n, email: c.e, tienda: c.t, rol: c.r,
+      score: c.s, nivel: lvl.name, nivelKey: c.k,
+      respuestas: c.a ? c.a.split("") : [],
+      modulos: MODS.map((m, i) => ({ id: m.id, name: m.name, score: (c.m||[])[i]||0, max: m.max }))
+    };
+  } catch { return null; }
+}
+
+function getShareURL(record) {
+  return location.origin + location.pathname + "?r=" + encodeRecord(record);
+}
+
+async function saveToCloud(record) {
+  saveLocal(record);
+  return true;
 }
 
 async function loadFromCloud() {
-  const res = await fetch(BLOB_BASE, { headers: { Accept: "application/json" } });
-  const data = await res.json();
-  return data.responses || [];
+  return getLocal();
 }
 
 /* ══════════════════════════════════
@@ -879,7 +920,9 @@ async function finish() {
     modulos: MODS.map(m => ({ id: m.id, name: m.name, score: modScores[m.id], max: m.max }))
   };
 
-  // Show saving overlay
+  S.lastRecord = record; // keep for sharing
+
+  // Show saving overlay briefly
   document.getElementById("saving-overlay").classList.add("show");
   await saveToCloud(record);
   document.getElementById("saving-overlay").classList.remove("show");
@@ -981,6 +1024,43 @@ function restartQuiz() {
   document.getElementById("i-rol").value = "";
 }
 
+function shareResult() {
+  if (!S.lastRecord) return;
+  const url = getShareURL(S.lastRecord);
+  navigator.clipboard.writeText(url).then(() => {
+    toast("✅ ¡Enlace copiado! Pégalo en Teams con #MiDiagnóstico");
+    document.getElementById("btn-share").textContent = "✅ Enlace copiado";
+    setTimeout(() => document.getElementById("btn-share").textContent = "📤 Compartir en Teams", 3000);
+  }).catch(() => {
+    // Fallback: show in prompt
+    window.prompt("Copia este enlace y pégalo en Teams con #MiDiagnóstico:", url);
+  });
+}
+
+function importLinks() {
+  const raw = document.getElementById("import-area").value;
+  // Extract all ?r= encoded data from URLs or raw encoded strings
+  const matches = [...raw.matchAll(/[?&]r=([A-Za-z0-9+/=]+)/g)].map(m => m[1]);
+  // Also try bare base64 strings on each line
+  raw.split(/[\n\s,]+/).forEach(part => {
+    if (part.length > 20 && !part.startsWith("http")) matches.push(part);
+  });
+
+  let imported = 0;
+  matches.forEach(enc => {
+    const rec = decodeRecord(enc);
+    if (rec) { saveLocal(rec); imported++; }
+  });
+
+  if (imported > 0) {
+    toast("✅ " + imported + " respuesta(s) importada(s)");
+    document.getElementById("import-area").value = "";
+    loadAdmin();
+  } else {
+    toast("No se encontraron enlaces válidos — verifica el formato");
+  }
+}
+
 /* ══════════════════════════════════
    ADMIN
 ══════════════════════════════════ */
@@ -997,13 +1077,9 @@ function checkAdmin() {
 }
 
 async function loadAdmin() {
-  try {
-    toast("Cargando datos...");
-    const records = await loadFromCloud();
-    renderAdmin(records);
-  } catch(e) {
-    toast("Error al cargar datos — revisa tu conexión");
-  }
+  const records = getLocal();
+  renderAdmin(records);
+  toast(records.length ? "✅ " + records.length + " respuesta(s) en este dispositivo" : "Sin datos aún — importa los enlaces de Teams");
 }
 
 function renderAdmin(records) {
@@ -1049,7 +1125,7 @@ function renderAdmin(records) {
 }
 
 async function exportCSV() {
-  const records = await loadFromCloud();
+  const records = getLocal();
   if (!records.length) return toast("No hay datos para exportar aún");
 
   const hdrs = ["N°","Nombre","Email","Local/Área","Rol","Score","Nivel",
@@ -1073,17 +1149,11 @@ async function exportCSV() {
   toast("✅ Excel descargado — " + records.length + " respuestas");
 }
 
-async function clearAll() {
-  if (!confirm("¿Eliminar TODOS los datos del servidor? Esta acción no se puede deshacer.")) return;
-  try {
-    await fetch(BLOB_BASE, {
-      method: "PUT",
-      headers: {"Content-Type":"application/json","Accept":"application/json"},
-      body: JSON.stringify({responses:[], diplomado:"Plaza Imperial x Poli 2026", cleared: new Date().toISOString()})
-    });
-    renderAdmin([]);
-    toast("🗑️ Datos eliminados del servidor");
-  } catch(e) { toast("Error al limpiar datos"); }
+function clearAll() {
+  if (!confirm("¿Eliminar todos los datos guardados en este dispositivo?")) return;
+  localStorage.removeItem(STORE_KEY);
+  renderAdmin([]);
+  toast("🗑️ Datos eliminados");
 }
 
 /* ══════════════════════════════════
@@ -1179,7 +1249,21 @@ function toast(msg) {
 /* ══════════════════════════════════
    INIT
 ══════════════════════════════════ */
-if (new URLSearchParams(location.search).get("admin") !== null) showView("admin");
+// Handle URL params
+(function() {
+  const params = new URLSearchParams(location.search);
+  if (params.get("admin") !== null) {
+    showView("admin");
+  } else if (params.get("r")) {
+    // Someone opened a shared result link — show their result
+    const rec = decodeRecord(params.get("r"));
+    if (rec) {
+      S.lastRecord = rec;
+      const { total, modScores } = { total: rec.score, modScores: Object.fromEntries(rec.modulos.map(m => [m.id, m.score])) };
+      renderResult(total, getLevel(total), modScores, rec.nombre);
+    }
+  }
+})();
 </script>
 </body>
 </html>
