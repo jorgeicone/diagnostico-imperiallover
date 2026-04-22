@@ -7,817 +7,539 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <style>
     :root {
-      --navy: #003087;
-      --navy-light: #0041b3;
+      --bg: #08101f;
+      --bg2: #0d1a2e;
+      --surface: rgba(255,255,255,0.05);
+      --surface2: rgba(255,255,255,0.08);
+      --border: rgba(255,255,255,0.1);
       --coral: #E8401C;
+      --coral2: #ff5a34;
+      --navy: #003087;
       --gold: #D4A847;
-      --cream: #FFF8F0;
+      --cyan: #00C8FF;
+      --green: #00d48a;
       --white: #FFFFFF;
-      --gray-light: #F5F5F5;
-      --gray: #888;
-      --text: #1A1A2E;
-      --text-light: #555;
-      --green: #2E7D32;
-      --border: rgba(0,48,135,0.15);
+      --t1: rgba(255,255,255,0.95);
+      --t2: rgba(255,255,255,0.65);
+      --t3: rgba(255,255,255,0.35);
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
-      background: var(--cream);
-      color: var(--text);
-      min-height: 100vh;
-      line-height: 1.6;
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{
+      background:var(--bg);
+      color:var(--t1);
+      font-family:'Segoe UI',system-ui,sans-serif;
+      min-height:100vh;
+      overflow-x:hidden;
     }
 
-    /* ─── HEADER ─── */
-    .app-header {
-      background: var(--navy);
-      color: white;
-      text-align: center;
-      padding: 18px 20px 14px;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      box-shadow: 0 2px 16px rgba(0,48,135,0.3);
+    /* ── PARTICLES ── */
+    #cv{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+    /* ── LAYOUT ── */
+    .wrap{position:relative;z-index:1;}
+    .view{display:none;}
+    .view.active{display:block;}
+
+    /* ── HEADER ── */
+    .hdr{
+      position:sticky;top:0;z-index:100;
+      background:rgba(8,16,31,0.85);
+      backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--border);
+      padding:12px 20px;
+      display:flex;align-items:center;justify-content:center;
+      gap:16px;
     }
-    .header-logo {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 14px;
-      flex-wrap: wrap;
+    .hdr-poli{
+      font-size:0.7rem;font-weight:800;letter-spacing:2px;
+      text-transform:uppercase;color:var(--t2);
+      border:1px solid rgba(255,255,255,0.2);
+      padding:3px 10px;border-radius:4px;
     }
-    .logo-poli {
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      opacity: 0.85;
-      border: 1.5px solid rgba(255,255,255,0.4);
-      padding: 4px 10px;
-      border-radius: 4px;
+    .hdr-sep{color:var(--t3);font-size:1rem;}
+    .hdr-imperial{
+      font-size:1rem;font-weight:900;letter-spacing:0.5px;
+      background:linear-gradient(135deg,var(--coral),var(--gold));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
     }
-    .logo-sep { opacity: 0.4; font-size: 1.2rem; }
-    .logo-imperial {
-      font-size: 1.1rem;
-      font-weight: 800;
-      letter-spacing: 0.5px;
+    .hdr-sub{font-size:0.65rem;color:var(--t3);letter-spacing:1px;text-transform:uppercase;}
+
+    /* ── TOAST ── */
+    #toast{
+      position:fixed;bottom:28px;left:50%;
+      transform:translateX(-50%) translateY(60px);
+      background:rgba(232,64,28,0.95);
+      backdrop-filter:blur(10px);
+      color:#fff;padding:10px 24px;border-radius:50px;
+      font-size:0.85rem;font-weight:700;z-index:999;
+      transition:.3s ease;opacity:0;white-space:nowrap;
+      box-shadow:0 4px 20px rgba(232,64,28,0.4);
     }
-    .logo-imperial span { color: var(--gold); }
-    .header-sub {
-      font-size: 0.72rem;
-      opacity: 0.7;
-      margin-top: 4px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
+    #toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+    /* ── GLASS CARD ── */
+    .glass{
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:20px;
+      backdrop-filter:blur(16px);
+    }
+    .glass-strong{
+      background:rgba(255,255,255,0.07);
+      border:1px solid rgba(255,255,255,0.14);
+      border-radius:20px;
+      backdrop-filter:blur(20px);
     }
 
-    /* ─── VIEWS ─── */
-    .view { display: none; }
-    .view.active { display: block; }
+    /* ═══ INTRO ═══ */
+    .intro-outer{max-width:660px;margin:0 auto;padding:40px 20px 80px;}
+    .intro-badge{
+      display:inline-flex;align-items:center;gap:8px;
+      background:rgba(232,64,28,0.15);
+      border:1px solid rgba(232,64,28,0.4);
+      color:var(--coral2);
+      font-size:0.75rem;font-weight:800;letter-spacing:2px;
+      text-transform:uppercase;
+      padding:6px 16px;border-radius:50px;margin-bottom:20px;
+    }
+    .intro-title{
+      font-size:2.4rem;font-weight:900;line-height:1.1;
+      margin-bottom:14px;
+    }
+    .grad-text{
+      background:linear-gradient(135deg,var(--coral),var(--gold),#fff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+    }
+    .intro-desc{font-size:0.98rem;color:var(--t2);max-width:480px;margin:0 auto 28px;line-height:1.65;}
 
-    /* ─── INTRO ─── */
-    .intro-wrap {
-      max-width: 640px;
-      margin: 0 auto;
-      padding: 36px 20px 60px;
+    .pillars{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:32px;}
+    .pillar{
+      padding:7px 16px;border-radius:50px;
+      font-size:0.82rem;font-weight:700;
+      display:flex;align-items:center;gap:6px;
     }
-    .intro-hero {
-      text-align: center;
-      margin-bottom: 32px;
-    }
-    .intro-badge {
-      display: inline-block;
-      background: linear-gradient(135deg, var(--coral), #f5602a);
-      color: white;
-      font-size: 0.78rem;
-      font-weight: 700;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      padding: 6px 18px;
-      border-radius: 50px;
-      margin-bottom: 16px;
-    }
-    .intro-title {
-      font-size: 2rem;
-      font-weight: 900;
-      color: var(--navy);
-      line-height: 1.15;
-      margin-bottom: 12px;
-    }
-    .intro-title em { color: var(--coral); font-style: normal; }
-    .intro-desc {
-      font-size: 1rem;
-      color: var(--text-light);
-      max-width: 480px;
-      margin: 0 auto 24px;
-    }
-    .pillars-row {
-      display: flex;
-      justify-content: center;
-      gap: 12px;
-      flex-wrap: wrap;
-      margin-bottom: 28px;
-    }
-    .pillar-chip {
-      background: white;
-      border: 2px solid var(--border);
-      border-radius: 50px;
-      padding: 8px 16px;
-      font-size: 0.88rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .pillar-chip.amistad { border-color: #003087; color: #003087; }
-    .pillar-chip.familia { border-color: var(--green); color: var(--green); }
-    .pillar-chip.amor { border-color: var(--coral); color: var(--coral); }
+    .pillar-a{background:rgba(0,48,135,0.25);border:1px solid rgba(0,48,135,0.5);color:#6ba3ff;}
+    .pillar-f{background:rgba(0,212,138,0.12);border:1px solid rgba(0,212,138,0.3);color:#00d48a;}
+    .pillar-m{background:rgba(232,64,28,0.15);border:1px solid rgba(232,64,28,0.35);color:var(--coral2);}
 
-    .modules-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 8px;
-      margin-bottom: 32px;
+    .mods-grid{
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;margin-bottom:32px;
     }
-    .module-chip {
-      background: white;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--navy);
-      text-align: center;
+    @media(max-width:520px){.mods-grid{grid-template-columns:repeat(2,1fr);}}
+    .mod-chip{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:12px;padding:10px 8px;text-align:center;
+      font-size:0.72rem;font-weight:600;color:var(--t2);
+      transition:.2s;
     }
-    .module-chip .mod-num {
-      display: block;
-      font-size: 1.2rem;
-      font-weight: 900;
-      color: var(--coral);
-      line-height: 1;
-      margin-bottom: 4px;
+    .mod-chip:hover{background:var(--surface2);border-color:rgba(232,64,28,0.3);}
+    .mod-chip .mn{
+      display:block;font-size:1.3rem;font-weight:900;
+      background:linear-gradient(135deg,var(--coral),var(--gold));
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+      background-clip:text;
+      line-height:1.2;margin-bottom:4px;
     }
 
-    /* ─── FORM ─── */
-    .form-card {
-      background: white;
-      border-radius: 20px;
-      padding: 32px 28px;
-      box-shadow: 0 4px 24px rgba(0,48,135,0.08);
-      border: 1px solid var(--border);
+    /* FORM */
+    .form-card{padding:28px;}
+    .form-title{
+      font-size:1rem;font-weight:800;color:var(--t1);
+      margin-bottom:20px;display:flex;align-items:center;gap:8px;
     }
-    .form-title {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+    .frow{margin-bottom:14px;}
+    .frow label{
+      display:block;font-size:0.72rem;font-weight:800;
+      color:var(--t3);text-transform:uppercase;letter-spacing:1px;
+      margin-bottom:6px;
     }
-    .form-row { margin-bottom: 16px; }
-    .form-row label {
-      display: block;
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--navy);
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .frow input,.frow select{
+      width:100%;padding:12px 16px;
+      background:rgba(255,255,255,0.06);
+      border:1.5px solid rgba(255,255,255,0.12);
+      border-radius:10px;color:var(--t1);
+      font-size:0.93rem;outline:none;transition:.2s;
+      font-family:inherit;
     }
-    .form-row input, .form-row select {
-      width: 100%;
-      padding: 13px 16px;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      font-size: 0.95rem;
-      color: var(--text);
-      background: var(--gray-light);
-      outline: none;
-      transition: 0.2s;
-      font-family: inherit;
+    .frow input:focus,.frow select:focus{
+      border-color:rgba(232,64,28,0.6);
+      background:rgba(232,64,28,0.06);
+      box-shadow:0 0 0 3px rgba(232,64,28,0.1);
     }
-    .form-row input:focus, .form-row select:focus {
-      border-color: var(--navy);
-      background: white;
-      box-shadow: 0 0 0 3px rgba(0,48,135,0.1);
-    }
-    .form-row input::placeholder { color: #aaa; }
-    .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    @media(max-width: 480px) { .form-grid-2 { grid-template-columns: 1fr; } }
+    .frow input::placeholder{color:var(--t3);}
+    .frow select option{background:#1a2540;color:#fff;}
+    .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:480px){.fgrid{grid-template-columns:1fr;}}
 
-    .btn-start {
-      width: 100%;
-      padding: 16px;
-      background: linear-gradient(135deg, var(--navy), var(--navy-light));
-      color: white;
-      border: none;
-      border-radius: 12px;
-      font-size: 1.05rem;
-      font-weight: 800;
-      cursor: pointer;
-      margin-top: 8px;
-      transition: 0.2s;
-      letter-spacing: 0.5px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    .btn-start{
+      width:100%;padding:16px;margin-top:8px;
+      background:linear-gradient(135deg,var(--coral),#c73214);
+      color:#fff;border:none;border-radius:12px;
+      font-size:1rem;font-weight:900;cursor:pointer;
+      letter-spacing:0.5px;transition:.2s;
+      display:flex;align-items:center;justify-content:center;gap:8px;
+      box-shadow:0 4px 20px rgba(232,64,28,0.35);
     }
-    .btn-start:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,48,135,0.35); }
-    .btn-start:active { transform: translateY(0); }
+    .btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(232,64,28,0.5);}
+    .btn-start:active{transform:translateY(0);}
+    .privacy{text-align:center;font-size:0.72rem;color:var(--t3);margin-top:10px;}
 
-    .privacy-note {
-      text-align: center;
-      font-size: 0.75rem;
-      color: var(--gray);
-      margin-top: 12px;
+    /* ═══ QUIZ ═══ */
+    .quiz-outer{max-width:680px;margin:0 auto;padding:24px 20px 80px;}
+
+    .prog-wrap{margin-bottom:22px;}
+    .prog-meta{display:flex;justify-content:space-between;margin-bottom:8px;}
+    .prog-mod{font-size:0.72rem;font-weight:800;color:var(--coral2);text-transform:uppercase;letter-spacing:1.5px;}
+    .prog-count{font-size:0.8rem;font-weight:700;color:var(--t2);}
+    .prog-bar{
+      height:4px;background:rgba(255,255,255,0.08);
+      border-radius:50px;overflow:hidden;
+    }
+    .prog-fill{
+      height:100%;border-radius:50px;
+      background:linear-gradient(90deg,var(--coral),var(--gold));
+      transition:width .5s ease;
+      box-shadow:0 0 8px rgba(232,64,28,0.5);
     }
 
-    /* ─── QUIZ ─── */
-    .quiz-wrap {
-      max-width: 680px;
-      margin: 0 auto;
-      padding: 24px 20px 60px;
+    .q-card{
+      padding:32px 28px 24px;
+      margin-bottom:16px;
+      animation:fadeUp .35s ease;
     }
-    .progress-header {
-      margin-bottom: 20px;
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .q-num{
+      font-size:0.7rem;font-weight:800;color:var(--coral2);
+      text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;
     }
-    .progress-meta {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
-    }
-    .progress-module {
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--coral);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .progress-count {
-      font-size: 0.82rem;
-      font-weight: 700;
-      color: var(--navy);
-    }
-    .progress-bar {
-      height: 6px;
-      background: rgba(0,48,135,0.1);
-      border-radius: 50px;
-      overflow: hidden;
-    }
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--coral), var(--navy));
-      border-radius: 50px;
-      transition: width 0.5s ease;
+    .q-text{
+      font-size:1.08rem;font-weight:700;color:var(--t1);
+      line-height:1.5;margin-bottom:24px;
     }
 
-    .question-card {
-      background: white;
-      border-radius: 20px;
-      padding: 32px 28px 28px;
-      box-shadow: 0 4px 24px rgba(0,48,135,0.08);
-      border: 1px solid var(--border);
-      margin-bottom: 16px;
-      animation: slideIn 0.35s ease;
+    .opts{display:flex;flex-direction:column;gap:10px;}
+    .opt{
+      display:flex;align-items:flex-start;gap:14px;
+      padding:14px 16px;
+      background:rgba(255,255,255,0.04);
+      border:1.5px solid rgba(255,255,255,0.08);
+      border-radius:14px;cursor:pointer;
+      text-align:left;width:100%;
+      color:var(--t2);font-family:inherit;
+      transition:all .2s;
     }
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
+    .opt:hover{
+      background:rgba(232,64,28,0.08);
+      border-color:rgba(232,64,28,0.3);
+      color:var(--t1);
+      transform:translateX(4px);
     }
-    .q-number {
-      font-size: 0.75rem;
-      font-weight: 700;
-      color: var(--coral);
-      text-transform: uppercase;
-      letter-spacing: 1.5px;
-      margin-bottom: 12px;
+    .opt.sel{
+      background:rgba(232,64,28,0.12);
+      border-color:rgba(232,64,28,0.6);
+      color:var(--t1);
+      box-shadow:0 0 20px rgba(232,64,28,0.15);
     }
-    .q-text {
-      font-size: 1.1rem;
-      font-weight: 700;
-      color: var(--navy);
-      line-height: 1.4;
-      margin-bottom: 24px;
+    .opt-letter{
+      flex-shrink:0;width:28px;height:28px;border-radius:50%;
+      background:rgba(255,255,255,0.08);
+      border:1.5px solid rgba(255,255,255,0.15);
+      display:flex;align-items:center;justify-content:center;
+      font-size:0.75rem;font-weight:900;color:var(--t2);
+      margin-top:2px;transition:.2s;
+    }
+    .opt.sel .opt-letter{
+      background:var(--coral);border-color:var(--coral);
+      color:#fff;box-shadow:0 0 10px rgba(232,64,28,0.5);
+    }
+    .opt-text{font-size:0.9rem;line-height:1.5;padding-top:3px;}
+
+    .q-nav{display:flex;gap:10px;}
+    .btn-prev{
+      padding:13px 20px;
+      background:rgba(255,255,255,0.05);
+      border:1.5px solid rgba(255,255,255,0.12);
+      border-radius:10px;color:var(--t2);
+      font-size:0.88rem;font-weight:700;cursor:pointer;
+      transition:.2s;font-family:inherit;
+    }
+    .btn-prev:hover{background:rgba(255,255,255,0.09);color:var(--t1);}
+    .btn-next{
+      flex:1;padding:14px 20px;
+      background:linear-gradient(135deg,var(--coral),#c73214);
+      color:#fff;border:none;border-radius:10px;
+      font-size:0.93rem;font-weight:800;cursor:pointer;
+      transition:.2s;letter-spacing:.3px;
+      box-shadow:0 4px 16px rgba(232,64,28,0.3);
+      font-family:inherit;
+    }
+    .btn-next:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(232,64,28,0.45);}
+    .btn-next:disabled{opacity:.35;cursor:not-allowed;transform:none;box-shadow:none;}
+
+    /* saving overlay */
+    .saving-overlay{
+      position:fixed;inset:0;z-index:200;
+      background:rgba(8,16,31,0.92);
+      backdrop-filter:blur(10px);
+      display:none;align-items:center;justify-content:center;
+      flex-direction:column;gap:16px;
+    }
+    .saving-overlay.show{display:flex;}
+    .spin{
+      width:44px;height:44px;border-radius:50%;
+      border:3px solid rgba(232,64,28,0.25);
+      border-top-color:var(--coral);
+      animation:spin .7s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .saving-text{font-size:0.9rem;font-weight:700;color:var(--t2);}
+
+    /* ═══ RESULT ═══ */
+    .res-outer{max-width:720px;margin:0 auto;padding:32px 20px 80px;}
+
+    .res-hero{
+      text-align:center;padding:44px 28px 36px;
+      margin-bottom:16px;
+      position:relative;overflow:hidden;
+    }
+    .res-hero::before{
+      content:'';position:absolute;
+      top:-60px;left:50%;transform:translateX(-50%);
+      width:300px;height:300px;border-radius:50%;
+      filter:blur(80px);opacity:.25;z-index:0;
+    }
+    .lv-p .res-hero::before{background:#ff8c00;}
+    .lv-f .res-hero::before{background:#00aaff;}
+    .lv-e .res-hero::before{background:var(--green);}
+    .res-hero>*{position:relative;z-index:1;}
+
+    .res-badge{
+      display:inline-block;
+      padding:7px 20px;border-radius:50px;
+      font-size:0.75rem;font-weight:800;letter-spacing:2px;
+      text-transform:uppercase;margin-bottom:20px;
+    }
+    .lv-p .res-badge{background:rgba(255,140,0,0.15);border:1px solid rgba(255,140,0,0.4);color:#ffb347;}
+    .lv-f .res-badge{background:rgba(0,170,255,0.12);border:1px solid rgba(0,170,255,0.35);color:#66ccff;}
+    .lv-e .res-badge{background:rgba(0,212,138,0.12);border:1px solid rgba(0,212,138,0.35);color:#00d48a;}
+
+    .score-circle{
+      width:140px;height:140px;border-radius:50%;
+      margin:0 auto 20px;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      position:relative;
+    }
+    .lv-p .score-circle{background:linear-gradient(135deg,#ff8c00,#e65100);box-shadow:0 0 40px rgba(255,140,0,0.35);}
+    .lv-f .score-circle{background:linear-gradient(135deg,#00aaff,#0055cc);box-shadow:0 0 40px rgba(0,170,255,0.35);}
+    .lv-e .score-circle{background:linear-gradient(135deg,#00d48a,#00875a);box-shadow:0 0 40px rgba(0,212,138,0.35);}
+
+    .score-num{font-size:3rem;font-weight:900;color:#fff;line-height:1;}
+    .score-lbl{font-size:0.65rem;color:rgba(255,255,255,0.7);font-weight:700;letter-spacing:2px;}
+
+    .res-name{font-size:1.7rem;font-weight:900;margin-bottom:6px;}
+    .res-level{font-size:1rem;font-weight:700;margin-bottom:14px;}
+    .lv-p .res-level{color:#ffb347;}
+    .lv-f .res-level{color:#66ccff;}
+    .lv-e .res-level{color:#00d48a;}
+
+    .res-msg{font-size:0.93rem;color:var(--t2);max-width:480px;margin:0 auto 20px;line-height:1.65;}
+
+    .res-pillars{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;}
+    .res-p{padding:5px 14px;border-radius:50px;font-size:0.78rem;font-weight:700;}
+    .res-p.a{background:rgba(107,163,255,0.15);color:#6ba3ff;}
+    .res-p.f{background:rgba(0,212,138,0.12);color:#00d48a;}
+    .res-p.m{background:rgba(232,64,28,0.15);color:var(--coral2);}
+
+    /* Chart card */
+    .chart-card{padding:28px;margin-bottom:14px;}
+    .sec-title{font-size:0.9rem;font-weight:800;color:var(--t1);margin-bottom:20px;display:flex;align-items:center;gap:8px;}
+    .chart-wrap{position:relative;height:280px;}
+
+    /* Bars */
+    .bars-card{padding:28px;margin-bottom:14px;}
+    .bar-row{display:grid;grid-template-columns:130px 1fr 44px;align-items:center;gap:10px;margin-bottom:12px;}
+    @media(max-width:480px){.bar-row{grid-template-columns:90px 1fr 36px;}}
+    .bar-lbl{font-size:0.78rem;font-weight:600;color:var(--t2);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .bar-track{height:8px;background:rgba(255,255,255,0.07);border-radius:50px;overflow:hidden;}
+    .bar-fill{height:100%;border-radius:50px;background:linear-gradient(90deg,var(--coral),var(--gold));transition:width 1s ease;}
+    .bar-pct{font-size:0.8rem;font-weight:800;color:var(--gold);}
+
+    .res-actions{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn-sec{
+      flex:1;min-width:140px;padding:13px 16px;
+      background:rgba(255,255,255,0.05);
+      border:1.5px solid rgba(255,255,255,0.12);
+      border-radius:12px;color:var(--t2);
+      font-size:0.88rem;font-weight:700;cursor:pointer;
+      transition:.2s;text-align:center;font-family:inherit;
+    }
+    .btn-sec:hover{background:rgba(255,255,255,0.09);color:var(--t1);}
+    .btn-sec.primary{
+      background:linear-gradient(135deg,var(--navy),#0055cc);
+      color:#fff;border-color:transparent;
+      box-shadow:0 4px 16px rgba(0,48,135,0.4);
+    }
+    .btn-sec.primary:hover{transform:translateY(-2px);box-shadow:0 6px 22px rgba(0,48,135,0.5);}
+
+    /* ═══ ADMIN ═══ */
+    .admin-login-wrap{max-width:400px;margin:60px auto;padding:0 20px;}
+    .admin-login{text-align:center;padding:40px 28px;}
+    .lock-ico{font-size:2.8rem;margin-bottom:14px;}
+    .admin-title{font-size:1.2rem;font-weight:900;margin-bottom:6px;}
+    .admin-sub{font-size:0.85rem;color:var(--t2);margin-bottom:24px;}
+
+    .admin-outer{max-width:1100px;margin:0 auto;padding:28px 20px 80px;}
+    .admin-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;margin-bottom:24px;}
+    .admin-h1{font-size:1.4rem;font-weight:900;}
+
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap;}
+    .btn-export{
+      padding:11px 20px;
+      background:linear-gradient(135deg,#00875a,#00d48a);
+      color:#fff;border:none;border-radius:10px;
+      font-size:0.85rem;font-weight:800;cursor:pointer;
+      transition:.2s;font-family:inherit;
+      display:flex;align-items:center;gap:6px;
+      box-shadow:0 4px 14px rgba(0,212,138,0.3);
+    }
+    .btn-export:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,212,138,0.4);}
+    .btn-refresh{
+      padding:11px 18px;
+      background:rgba(0,200,255,0.1);
+      border:1.5px solid rgba(0,200,255,0.3);
+      border-radius:10px;color:#66ddff;
+      font-size:0.85rem;font-weight:700;cursor:pointer;
+      transition:.2s;font-family:inherit;
+    }
+    .btn-refresh:hover{background:rgba(0,200,255,0.15);}
+    .btn-del{
+      padding:11px 18px;
+      background:rgba(239,83,80,0.1);
+      border:1.5px solid rgba(239,83,80,0.3);
+      border-radius:10px;color:#ff8a8a;
+      font-size:0.85rem;font-weight:700;cursor:pointer;
+      transition:.2s;font-family:inherit;
+    }
+    .btn-del:hover{background:rgba(239,83,80,0.15);}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:22px;}
+    .stat{padding:18px 20px;border-radius:14px;}
+    .stat-lbl{font-size:0.72rem;font-weight:800;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+    .stat-val{font-size:1.9rem;font-weight:900;line-height:1;}
+    .stat-sub{font-size:0.75rem;color:var(--t3);margin-top:4px;}
+
+    .tbl-wrap{border-radius:16px;overflow:hidden;border:1px solid var(--border);}
+    table{width:100%;border-collapse:collapse;font-size:0.8rem;}
+    thead tr{background:rgba(0,48,135,0.5);}
+    th{padding:11px 14px;text-align:left;font-size:0.72rem;font-weight:800;letter-spacing:.5px;color:var(--t2);white-space:nowrap;}
+    td{padding:11px 14px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:middle;}
+    tr:hover td{background:rgba(255,255,255,0.03);}
+    tr:last-child td{border-bottom:none;}
+
+    .pill{display:inline-block;padding:3px 10px;border-radius:50px;font-size:0.7rem;font-weight:800;white-space:nowrap;}
+    .pill-p{background:rgba(255,140,0,0.15);color:#ffb347;}
+    .pill-f{background:rgba(0,170,255,0.12);color:#66ccff;}
+    .pill-e{background:rgba(0,212,138,0.12);color:#00d48a;}
+
+    .mini-bar{display:flex;align-items:center;gap:6px;}
+    .mini-track{width:52px;height:4px;background:rgba(255,255,255,0.08);border-radius:50px;overflow:hidden;}
+    .mini-fill{height:100%;border-radius:50px;background:linear-gradient(90deg,var(--coral),var(--gold));}
+
+    .empty{text-align:center;padding:60px 20px;color:var(--t3);}
+    .empty-ico{font-size:3rem;margin-bottom:12px;}
+
+    /* confetti */
+    .confetti-piece{
+      position:fixed;top:-10px;
+      width:10px;height:10px;border-radius:2px;
+      animation:fall linear forwards;
+      z-index:300;pointer-events:none;
+    }
+    @keyframes fall{
+      0%{transform:translateY(0) rotate(0);opacity:1;}
+      100%{transform:translateY(105vh) rotate(720deg);opacity:0;}
     }
 
-    .options-list {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .option-btn {
-      display: flex;
-      align-items: flex-start;
-      gap: 14px;
-      padding: 14px 16px;
-      background: var(--gray-light);
-      border: 2px solid transparent;
-      border-radius: 12px;
-      cursor: pointer;
-      text-align: left;
-      transition: all 0.2s;
-      width: 100%;
-      font-family: inherit;
-      color: var(--text);
-    }
-    .option-btn:hover {
-      background: #EEF3FF;
-      border-color: rgba(0,48,135,0.25);
-      transform: translateX(3px);
-    }
-    .option-btn.selected {
-      background: linear-gradient(135deg, #EEF3FF, #F0F5FF);
-      border-color: var(--navy);
-      box-shadow: 0 2px 12px rgba(0,48,135,0.15);
-    }
-    .opt-letter {
-      flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: white;
-      border: 2px solid var(--border);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8rem;
-      font-weight: 800;
-      color: var(--navy);
-      margin-top: 1px;
-      transition: 0.2s;
-    }
-    .option-btn.selected .opt-letter {
-      background: var(--navy);
-      color: white;
-      border-color: var(--navy);
-    }
-    .opt-text {
-      font-size: 0.92rem;
-      line-height: 1.45;
-      padding-top: 3px;
-    }
-
-    .quiz-nav {
-      display: flex;
-      gap: 12px;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .btn-prev {
-      padding: 12px 20px;
-      background: white;
-      border: 2px solid var(--border);
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--navy);
-      cursor: pointer;
-      transition: 0.2s;
-    }
-    .btn-prev:hover { border-color: var(--navy); background: var(--cream); }
-    .btn-next {
-      flex: 1;
-      padding: 14px 20px;
-      background: linear-gradient(135deg, var(--navy), var(--navy-light));
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.95rem;
-      font-weight: 800;
-      cursor: pointer;
-      transition: 0.2s;
-      letter-spacing: 0.3px;
-    }
-    .btn-next:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,48,135,0.3); }
-    .btn-next:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
-
-    /* ─── RESULT ─── */
-    .result-wrap {
-      max-width: 720px;
-      margin: 0 auto;
-      padding: 32px 20px 80px;
-    }
-    .result-hero {
-      text-align: center;
-      background: white;
-      border-radius: 24px;
-      padding: 40px 28px 32px;
-      box-shadow: 0 6px 32px rgba(0,48,135,0.1);
-      border: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-    .result-level-badge {
-      display: inline-block;
-      padding: 8px 22px;
-      border-radius: 50px;
-      font-size: 0.78rem;
-      font-weight: 800;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-    .level-principiante .result-level-badge { background: #FFF3E0; color: #E65100; border: 2px solid #FF9800; }
-    .level-formacion .result-level-badge { background: #E8F4FD; color: #0277BD; border: 2px solid #29B6F6; }
-    .level-experto .result-level-badge { background: #E8F5E9; color: #1B5E20; border: 2px solid #4CAF50; }
-
-    .result-score-circle {
-      width: 130px;
-      height: 130px;
-      border-radius: 50%;
-      margin: 0 auto 16px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-    .level-principiante .result-score-circle { background: linear-gradient(135deg, #FF9800, #E65100); }
-    .level-formacion .result-score-circle { background: linear-gradient(135deg, #29B6F6, #0277BD); }
-    .level-experto .result-score-circle { background: linear-gradient(135deg, #4CAF50, #1B5E20); }
-
-    .score-num {
-      font-size: 2.8rem;
-      font-weight: 900;
-      color: white;
-      line-height: 1;
-    }
-    .score-label {
-      font-size: 0.72rem;
-      color: rgba(255,255,255,0.85);
-      font-weight: 600;
-      letter-spacing: 1px;
-    }
-    .result-name {
-      font-size: 1.6rem;
-      font-weight: 900;
-      color: var(--navy);
-      margin-bottom: 8px;
-    }
-    .result-level-name {
-      font-size: 1rem;
-      font-weight: 700;
-      margin-bottom: 12px;
-    }
-    .level-principiante .result-level-name { color: #E65100; }
-    .level-formacion .result-level-name { color: #0277BD; }
-    .level-experto .result-level-name { color: #1B5E20; }
-
-    .result-message {
-      font-size: 0.95rem;
-      color: var(--text-light);
-      max-width: 480px;
-      margin: 0 auto 20px;
-      line-height: 1.6;
-    }
-    .result-pillars {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    .result-pillar-chip {
-      padding: 6px 14px;
-      border-radius: 50px;
-      font-size: 0.8rem;
-      font-weight: 700;
-    }
-    .result-pillar-chip.a { background: #E8EEF8; color: var(--navy); }
-    .result-pillar-chip.f { background: #E8F5E9; color: var(--green); }
-    .result-pillar-chip.m { background: #FDE8E0; color: var(--coral); }
-
-    .result-chart-card {
-      background: white;
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 4px 20px rgba(0,48,135,0.07);
-      border: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-size: 1rem;
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .chart-container { position: relative; height: 300px; }
-
-    .modules-breakdown {
-      background: white;
-      border-radius: 20px;
-      padding: 28px;
-      box-shadow: 0 4px 20px rgba(0,48,135,0.07);
-      border: 1px solid var(--border);
-      margin-bottom: 20px;
-    }
-    .mod-bar-row {
-      display: grid;
-      grid-template-columns: 140px 1fr 44px;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 12px;
-    }
-    @media(max-width: 480px) { .mod-bar-row { grid-template-columns: 100px 1fr 36px; } }
-    .mod-bar-label {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-light);
-      text-align: right;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .mod-bar-track {
-      height: 10px;
-      background: var(--gray-light);
-      border-radius: 50px;
-      overflow: hidden;
-    }
-    .mod-bar-fill {
-      height: 100%;
-      border-radius: 50px;
-      background: linear-gradient(90deg, var(--coral), var(--navy));
-      transition: width 1s ease;
-    }
-    .mod-bar-pct {
-      font-size: 0.82rem;
-      font-weight: 800;
-      color: var(--navy);
-      text-align: right;
-    }
-
-    .result-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .btn-restart {
-      flex: 1;
-      min-width: 160px;
-      padding: 14px 20px;
-      background: white;
-      border: 2px solid var(--navy);
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: var(--navy);
-      cursor: pointer;
-      transition: 0.2s;
-      text-align: center;
-      font-family: inherit;
-    }
-    .btn-restart:hover { background: #EEF3FF; }
-
-    /* ─── ADMIN ─── */
-    .admin-wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      padding: 28px 20px 80px;
-    }
-    .admin-header-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .admin-title {
-      font-size: 1.4rem;
-      font-weight: 900;
-      color: var(--navy);
-    }
-    .admin-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 14px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: white;
-      border-radius: 14px;
-      padding: 18px 20px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 12px rgba(0,48,135,0.06);
-    }
-    .stat-label { font-size: 0.75rem; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .stat-value { font-size: 1.8rem; font-weight: 900; color: var(--navy); }
-    .stat-sub { font-size: 0.78rem; color: var(--gray); margin-top: 2px; }
-
-    .btn-export {
-      padding: 12px 22px;
-      background: linear-gradient(135deg, var(--green), #2E7D32);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: 0.2s;
-      font-family: inherit;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .btn-export:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(46,125,50,0.3); }
-
-    .btn-clear {
-      padding: 12px 18px;
-      background: white;
-      border: 2px solid #ef5350;
-      border-radius: 10px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      color: #ef5350;
-      cursor: pointer;
-      transition: 0.2s;
-      font-family: inherit;
-    }
-    .btn-clear:hover { background: #FDE8E8; }
-
-    .responses-table-wrap {
-      background: white;
-      border-radius: 16px;
-      border: 1px solid var(--border);
-      overflow: hidden;
-      box-shadow: 0 2px 16px rgba(0,48,135,0.06);
-    }
-    .responses-table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-    }
-    .responses-table th {
-      background: var(--navy);
-      color: white;
-      padding: 12px 14px;
-      text-align: left;
-      font-weight: 700;
-      font-size: 0.75rem;
-      letter-spacing: 0.5px;
-      white-space: nowrap;
-    }
-    .responses-table td {
-      padding: 11px 14px;
-      border-bottom: 1px solid var(--gray-light);
-      vertical-align: middle;
-    }
-    .responses-table tr:last-child td { border-bottom: none; }
-    .responses-table tr:hover td { background: #F7F9FF; }
-    .level-pill {
-      display: inline-block;
-      padding: 3px 10px;
-      border-radius: 50px;
-      font-size: 0.72rem;
-      font-weight: 700;
-      white-space: nowrap;
-    }
-    .pill-p { background: #FFF3E0; color: #E65100; }
-    .pill-f { background: #E8F4FD; color: #0277BD; }
-    .pill-e { background: #E8F5E9; color: #1B5E20; }
-
-    .score-bar-mini {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .score-bar-mini-track {
-      width: 60px;
-      height: 5px;
-      background: var(--gray-light);
-      border-radius: 50px;
-      overflow: hidden;
-    }
-    .score-bar-mini-fill {
-      height: 100%;
-      border-radius: 50px;
-      background: linear-gradient(90deg, var(--coral), var(--navy));
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--gray);
-    }
-    .empty-state .empty-icon { font-size: 3rem; margin-bottom: 12px; }
-    .empty-state p { font-size: 0.95rem; }
-
-    /* ─── ADMIN LOGIN ─── */
-    .admin-login-wrap {
-      max-width: 380px;
-      margin: 60px auto;
-      padding: 0 20px;
-    }
-    .admin-login-card {
-      background: white;
-      border-radius: 20px;
-      padding: 36px 28px;
-      box-shadow: 0 6px 32px rgba(0,48,135,0.12);
-      border: 1px solid var(--border);
-      text-align: center;
-    }
-    .admin-lock-icon { font-size: 2.5rem; margin-bottom: 12px; }
-    .admin-login-title {
-      font-size: 1.2rem;
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 6px;
-    }
-    .admin-login-sub { font-size: 0.85rem; color: var(--gray); margin-bottom: 24px; }
-
-    /* ─── TOAST ─── */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      background: var(--navy);
-      color: white;
-      padding: 12px 24px;
-      border-radius: 50px;
-      font-size: 0.88rem;
-      font-weight: 700;
-      z-index: 999;
-      transition: 0.35s;
-      opacity: 0;
-      white-space: nowrap;
-    }
-    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-    /* ─── RESPONSIVE ─── */
-    @media(max-width: 480px) {
-      .intro-title { font-size: 1.55rem; }
-      .question-card { padding: 22px 18px 18px; }
-      .q-text { font-size: 1rem; }
-      .form-card { padding: 22px 18px; }
-      .result-hero { padding: 28px 18px 22px; }
+    @media(max-width:480px){
+      .intro-title{font-size:1.8rem;}
+      .q-card{padding:22px 18px 18px;}
+      .q-text{font-size:1rem;}
+      .form-card{padding:20px 16px;}
     }
   </style>
 </head>
 <body>
 
-<!-- HEADER -->
-<header class="app-header">
-  <div class="header-logo">
-    <span class="logo-poli">Politécnico Grancolombiano</span>
-    <span class="logo-sep">×</span>
-    <span class="logo-imperial">Plaza <span>Imperial</span></span>
-  </div>
-  <div class="header-sub">Diplomado en Innovación y Estrategias de Experiencia del Consumidor</div>
-</header>
+<!-- PARTICLES -->
+<canvas id="cv"></canvas>
+
+<!-- SAVING OVERLAY -->
+<div class="saving-overlay" id="saving-overlay">
+  <div class="spin"></div>
+  <div class="saving-text">Guardando tu diagnóstico...</div>
+</div>
 
 <!-- TOAST -->
-<div class="toast" id="toast"></div>
+<div id="toast"></div>
 
-<!-- ═══════════ VIEW: INTRO ═══════════ -->
+<!-- HEADER -->
+<header class="hdr">
+  <span class="hdr-poli">Politécnico Grancolombiano</span>
+  <span class="hdr-sep">×</span>
+  <span class="hdr-imperial">Plaza Imperial</span>
+  <span class="hdr-sep">·</span>
+  <span class="hdr-sub">Diplomado CX 2026</span>
+</header>
+
+<div class="wrap">
+
+<!-- ═══ VIEW: INTRO ═══ -->
 <div id="view-intro" class="view active">
-  <div class="intro-wrap">
-    <div class="intro-hero">
-      <div class="intro-badge">🏆 Diagnóstico Inicial</div>
-      <h1 class="intro-title">¿Qué clase de<br><em>ImperialLover</em> eres?</h1>
-      <p class="intro-desc">Descubre tu nivel de experiencia en CX con 25 preguntas que cubren los 8 módulos del Diplomado. Solo toma 10 minutos.</p>
-      <div class="pillars-row">
-        <div class="pillar-chip amistad">🐢 Amistad</div>
-        <div class="pillar-chip familia">🌿 Familia</div>
-        <div class="pillar-chip amor">❤️ Amor</div>
-      </div>
+  <div class="intro-outer" style="text-align:center">
+    <div class="intro-badge">🏆 Diagnóstico Inicial de CX</div>
+    <h1 class="intro-title">¿Qué clase de<br><span class="grad-text">ImperialLover</span> eres?</h1>
+    <p class="intro-desc">Descubre tu nivel en Experiencia del Consumidor con 25 preguntas que cubren los 8 módulos del Diplomado. Solo toma 10 minutos.</p>
+
+    <div class="pillars">
+      <div class="pillar pillar-a">🐢 Amistad</div>
+      <div class="pillar pillar-f">🌿 Familia</div>
+      <div class="pillar pillar-m">❤️ Amor</div>
     </div>
 
-    <div class="modules-grid">
-      <div class="module-chip"><span class="mod-num">1</span>Fundamentos CX</div>
-      <div class="module-chip"><span class="mod-num">2</span>Customer Journey</div>
-      <div class="module-chip"><span class="mod-num">3</span>Peak-End Rule</div>
-      <div class="module-chip"><span class="mod-num">4</span>Innovación</div>
-      <div class="module-chip"><span class="mod-num">5</span>Fidelización</div>
-      <div class="module-chip"><span class="mod-num">6</span>Liderazgo</div>
-      <div class="module-chip"><span class="mod-num">7</span>CX Digital</div>
-      <div class="module-chip"><span class="mod-num">8</span>Métricas</div>
+    <div class="mods-grid">
+      <div class="mod-chip"><span class="mn">1</span>Fundamentos CX</div>
+      <div class="mod-chip"><span class="mn">2</span>Customer Journey</div>
+      <div class="mod-chip"><span class="mn">3</span>Peak-End Rule</div>
+      <div class="mod-chip"><span class="mn">4</span>Innovación</div>
+      <div class="mod-chip"><span class="mn">5</span>Fidelización</div>
+      <div class="mod-chip"><span class="mn">6</span>Liderazgo</div>
+      <div class="mod-chip"><span class="mn">7</span>CX Digital</div>
+      <div class="mod-chip"><span class="mn">8</span>Métricas</div>
     </div>
 
-    <div class="form-card">
+    <div class="glass-strong form-card">
       <div class="form-title">📋 Cuéntanos quién eres</div>
-      <div class="form-row">
+      <div class="frow">
         <label>Nombre completo *</label>
-        <input type="text" id="inp-nombre" placeholder="Tu nombre y apellido" autocomplete="name" />
+        <input type="text" id="i-nombre" placeholder="Tu nombre y apellido" autocomplete="name"/>
       </div>
-      <div class="form-row">
+      <div class="frow">
         <label>Correo electrónico *</label>
-        <input type="email" id="inp-email" placeholder="tu@correo.com" autocomplete="email" />
+        <input type="email" id="i-email" placeholder="tu@correo.com" autocomplete="email"/>
       </div>
-      <div class="form-grid-2">
-        <div class="form-row">
+      <div class="fgrid">
+        <div class="frow">
           <label>Local / Área</label>
-          <input type="text" id="inp-tienda" placeholder="Ej: Zara, Gerencia" />
+          <input type="text" id="i-tienda" placeholder="Ej: Zara, Gerencia"/>
         </div>
-        <div class="form-row">
+        <div class="frow">
           <label>Tu rol</label>
-          <select id="inp-rol">
+          <select id="i-rol">
             <option value="">Selecciona...</option>
             <option>Líder / Gerente</option>
             <option>Asesor / Vendedor</option>
@@ -828,637 +550,405 @@
           </select>
         </div>
       </div>
-      <button class="btn-start" onclick="startQuiz()">
-        ¡Comenzar Diagnóstico! →
-      </button>
-      <p class="privacy-note">🔒 Tus respuestas son confidenciales y solo se usan para fines del Diplomado</p>
+      <button class="btn-start" onclick="startQuiz()">✨ Comenzar Diagnóstico</button>
+      <p class="privacy">🔒 Tus respuestas son confidenciales y se usan únicamente para el Diplomado</p>
     </div>
   </div>
 </div>
 
-<!-- ═══════════ VIEW: QUIZ ═══════════ -->
+<!-- ═══ VIEW: QUIZ ═══ -->
 <div id="view-quiz" class="view">
-  <div class="quiz-wrap">
-    <div class="progress-header">
-      <div class="progress-meta">
-        <span class="progress-module" id="q-module-label"></span>
-        <span class="progress-count" id="q-count-label"></span>
+  <div class="quiz-outer">
+    <div class="prog-wrap">
+      <div class="prog-meta">
+        <span class="prog-mod" id="q-mod"></span>
+        <span class="prog-count" id="q-cnt"></span>
       </div>
-      <div class="progress-bar">
-        <div class="progress-fill" id="progress-fill"></div>
-      </div>
+      <div class="prog-bar"><div class="prog-fill" id="prog-fill"></div></div>
     </div>
-
-    <div class="question-card" id="question-card">
-      <div class="q-number" id="q-number"></div>
+    <div class="glass-strong q-card" id="q-card">
+      <div class="q-num" id="q-num"></div>
       <div class="q-text" id="q-text"></div>
-      <div class="options-list" id="options-list"></div>
+      <div class="opts" id="opts"></div>
     </div>
-
-    <div class="quiz-nav">
-      <button class="btn-prev" onclick="prevQuestion()" id="btn-prev">← Anterior</button>
-      <button class="btn-next" onclick="nextQuestion()" id="btn-next" disabled>Siguiente →</button>
+    <div class="q-nav">
+      <button class="btn-prev" onclick="prevQ()" id="btn-prev">← Anterior</button>
+      <button class="btn-next" onclick="nextQ()" id="btn-next" disabled>Siguiente →</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════ VIEW: RESULT ═══════════ -->
+<!-- ═══ VIEW: RESULT ═══ -->
 <div id="view-result" class="view">
-  <div class="result-wrap">
-    <div class="result-hero" id="result-hero">
-      <div class="result-level-badge" id="result-badge"></div>
-      <div class="result-score-circle" id="result-circle">
-        <div class="score-num" id="result-score-num"></div>
-        <div class="score-label">PUNTOS</div>
+  <div class="res-outer">
+    <div class="glass-strong res-hero" id="res-hero">
+      <div class="res-badge" id="res-badge"></div>
+      <div class="score-circle" id="res-circle">
+        <div class="score-num" id="res-score">0</div>
+        <div class="score-lbl">PUNTOS</div>
       </div>
-      <div class="result-name" id="result-name-display"></div>
-      <div class="result-level-name" id="result-level-name"></div>
-      <p class="result-message" id="result-message"></p>
-      <div class="result-pillars">
-        <span class="result-pillar-chip a">🐢 Amistad</span>
-        <span class="result-pillar-chip f">🌿 Familia</span>
-        <span class="result-pillar-chip m">❤️ Amor</span>
-      </div>
-    </div>
-
-    <div class="result-chart-card">
-      <div class="section-title">📊 Tu perfil por módulo</div>
-      <div class="chart-container">
-        <canvas id="radar-chart"></canvas>
+      <div class="res-name" id="res-name"></div>
+      <div class="res-level" id="res-level"></div>
+      <p class="res-msg" id="res-msg"></p>
+      <div class="res-pillars">
+        <span class="res-p a">🐢 Amistad</span>
+        <span class="res-p f">🌿 Familia</span>
+        <span class="res-p m">❤️ Amor</span>
       </div>
     </div>
 
-    <div class="modules-breakdown">
-      <div class="section-title">📈 Detalle por módulo</div>
-      <div id="modules-bars"></div>
+    <div class="glass chart-card">
+      <div class="sec-title">📊 Tu perfil por módulo</div>
+      <div class="chart-wrap"><canvas id="radar"></canvas></div>
     </div>
 
-    <div class="result-actions">
-      <button class="btn-restart" onclick="restartQuiz()">🔄 Hacer de nuevo</button>
-      <button class="btn-restart" onclick="showView('intro')" style="background:var(--navy);color:white;border-color:var(--navy);">
-        🏠 Inicio
-      </button>
+    <div class="glass bars-card">
+      <div class="sec-title">📈 Detalle por módulo</div>
+      <div id="bars-list"></div>
+    </div>
+
+    <div class="res-actions">
+      <button class="btn-sec" onclick="restartQuiz()">🔄 Hacer de nuevo</button>
+      <button class="btn-sec primary" onclick="showView('intro')">🏠 Inicio</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════ VIEW: ADMIN ═══════════ -->
+<!-- ═══ VIEW: ADMIN ═══ -->
 <div id="view-admin" class="view">
-  <div id="admin-login-section">
+  <div id="admin-login-wrap">
     <div class="admin-login-wrap">
-      <div class="admin-login-card">
-        <div class="admin-lock-icon">🔐</div>
-        <div class="admin-login-title">Panel de Administrador</div>
-        <div class="admin-login-sub">Ingresa la clave para ver los resultados del grupo</div>
-        <div class="form-row" style="text-align:left">
+      <div class="glass-strong admin-login">
+        <div class="lock-ico">🔐</div>
+        <div class="admin-title">Panel del Facilitador</div>
+        <div class="admin-sub">Ingresa la clave para ver los resultados del grupo</div>
+        <div class="frow" style="text-align:left">
           <label>Contraseña</label>
-          <input type="password" id="admin-pwd-input" placeholder="••••••••••" onkeydown="if(event.key==='Enter')checkAdmin()" />
+          <input type="password" id="pwd-in" placeholder="••••••••••" onkeydown="if(event.key==='Enter')checkAdmin()"/>
         </div>
         <button class="btn-start" onclick="checkAdmin()" style="margin-top:4px">Ingresar →</button>
       </div>
     </div>
   </div>
-
-  <div id="admin-panel-section" style="display:none">
-    <div class="admin-wrap">
-      <div class="admin-header-row">
-        <div class="admin-title">🏆 Panel ImperialLovers</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap">
-          <button class="btn-export" onclick="exportCSV()">📥 Exportar a Excel (.csv)</button>
-          <button class="btn-clear" onclick="clearAll()">🗑️ Limpiar datos</button>
+  <div id="admin-panel" style="display:none">
+    <div class="admin-outer">
+      <div class="admin-hdr">
+        <div class="admin-h1">🏆 Panel ImperialLovers</div>
+        <div class="btn-row">
+          <button class="btn-refresh" onclick="loadAdmin()">🔄 Actualizar</button>
+          <button class="btn-export" onclick="exportCSV()">📥 Exportar Excel</button>
+          <button class="btn-del" onclick="clearAll()">🗑️ Limpiar</button>
         </div>
       </div>
-
-      <div class="admin-stats" id="admin-stats"></div>
-
-      <div class="responses-table-wrap">
-        <table class="responses-table" id="responses-table">
+      <div class="stats-grid" id="admin-stats"></div>
+      <div class="tbl-wrap">
+        <table>
           <thead>
             <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Email</th>
-              <th>Local / Área</th>
-              <th>Rol</th>
-              <th>Score</th>
-              <th>Nivel</th>
+              <th>#</th><th>Nombre</th><th>Email</th><th>Local</th><th>Rol</th>
+              <th>Score</th><th>Nivel</th>
               <th>M1</th><th>M2</th><th>M3</th><th>M4</th>
               <th>M5</th><th>M6</th><th>M7</th><th>M8</th>
               <th>Fecha</th>
             </tr>
           </thead>
-          <tbody id="responses-tbody"></tbody>
+          <tbody id="admin-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
 </div>
 
+</div><!-- /wrap -->
+
 <script>
-/* ══════════════════════════════════════════════
-   DATA: 25 QUESTIONS × 8 MODULES
-══════════════════════════════════════════════ */
-const QUESTIONS = [
-  // MÓDULO 1: FUNDAMENTOS CX (3 preguntas)
-  {
-    module: 1, moduleName: "Fundamentos CX",
-    text: "¿Qué significa para ti la Experiencia del Consumidor (CX)?",
-    opts: [
-      "Es básicamente el servicio al cliente que damos en el mostrador",
-      "Es el conjunto de interacciones que tiene el cliente con nuestra empresa",
-      "Es cada percepción, emoción y recuerdo que el cliente construye en toda su relación con la marca"
-    ]
-  },
-  {
-    module: 1, moduleName: "Fundamentos CX",
-    text: "¿Con qué frecuencia piensas en la experiencia de tu cliente antes de tomar decisiones en tu trabajo?",
-    opts: [
-      "Rara vez — me enfoco en las tareas operativas del día a día",
-      "A veces, especialmente cuando hay quejas o problemas visibles",
-      "Siempre — el cliente es el centro de cada decisión que tomamos en mi equipo"
-    ]
-  },
-  {
-    module: 1, moduleName: "Fundamentos CX",
-    text: "¿Cómo describes la cultura de servicio en tu área de trabajo hoy?",
-    opts: [
-      "Aún estamos aprendiendo qué significa un servicio realmente excepcional",
-      "Tenemos buenas intenciones pero no siempre somos consistentes en la ejecución",
-      "Vivimos una cultura de servicio genuina donde cada persona sabe que marca la diferencia"
-    ]
-  },
-
-  // MÓDULO 2: CUSTOMER JOURNEY (3 preguntas)
-  {
-    module: 2, moduleName: "Customer Journey",
-    text: "¿Tienes identificados los momentos clave del recorrido de tu cliente en Plaza Imperial?",
-    opts: [
-      "No los tengo mapeados con claridad todavía",
-      "Conozco algunos puntos de contacto pero no el journey completo",
-      "Tengo mapeado el journey completo e identifico los momentos que más importan para el cliente"
-    ]
-  },
-  {
-    module: 2, moduleName: "Customer Journey",
-    text: "Si un cliente entra a tu local o área y sale sin lograr lo que buscaba, ¿qué haces?",
-    opts: [
-      "Es algo normal — no todos encuentran lo que necesitan",
-      "Intento identificar si hubo algo que pudimos haber hecho diferente",
-      "Analizo qué pasó en cada punto del recorrido para mejorar su próxima visita y evitar que se repita"
-    ]
-  },
-  {
-    module: 2, moduleName: "Customer Journey",
-    text: "¿Qué tan fácil es para un cliente navegar y encontrar lo que busca en tu espacio de trabajo?",
-    opts: [
-      "No lo hemos medido formalmente — asumimos que está bien",
-      "Creemos que es fácil, pero no tenemos datos claros de los clientes",
-      "Hemos optimizado cada punto del recorrido basados en feedback real y datos de clientes"
-    ]
-  },
-
-  // MÓDULO 3: PEAK-END RULE (3 preguntas)
-  {
-    module: 3, moduleName: "Peak-End Rule",
-    text: "¿Conoces y aplicas la 'Regla Pico-Final' (Peak-End Rule) en tu trabajo?",
-    opts: [
-      "No la conozco — es la primera vez que escucho ese término",
-      "He escuchado algo al respecto pero no la aplico conscientemente en mi trabajo",
-      "La conozco bien y diseño momentos pico y cierres memorables para mis clientes"
-    ]
-  },
-  {
-    module: 3, moduleName: "Peak-End Rule",
-    text: "¿Cuál es el momento más memorable (positivo o negativo) que vive un cliente al interactuar con tu marca?",
-    opts: [
-      "Honestamente no lo sé — no lo hemos identificado",
-      "Tengo una idea general pero no la he validado con los clientes reales",
-      "Lo tenemos perfectamente identificado, diseñado y optimizado para generar momentos WOW"
-    ]
-  },
-  {
-    module: 3, moduleName: "Peak-End Rule",
-    text: "¿Cómo termina generalmente la experiencia de un cliente cuando interactúa con tu local o equipo?",
-    opts: [
-      "Se va sin ningún elemento diferencial de cierre — la despedida es estándar",
-      "A veces hacemos algo especial para despedirlos, pero no es consistente",
-      "Tenemos un ritual de cierre diseñado para que el cliente se vaya con una sonrisa y ganas de volver"
-    ]
-  },
-
-  // MÓDULO 4: INNOVACIÓN EN SERVICIO (3 preguntas)
-  {
-    module: 4, moduleName: "Innovación en Servicio",
-    text: "¿Cuándo fue la última vez que innovaste genuinamente en la forma de atender o sorprender a tus clientes?",
-    opts: [
-      "No recuerdo — tendemos a hacer las cosas como siempre se han hecho",
-      "Hace algunos meses probamos algo diferente con resultados mixtos",
-      "Constantemente — experimentamos nuevas formas de sorprender y deleitar a nuestros clientes"
-    ]
-  },
-  {
-    module: 4, moduleName: "Innovación en Servicio",
-    text: "¿Cómo reaccionas cuando un cliente te sugiere una mejora en el servicio?",
-    opts: [
-      "Lo escucho con amabilidad pero rara vez implemento los cambios sugeridos",
-      "Lo analizo con calma y a veces hago ajustes si tiene sentido operativo",
-      "Lo valoro enormemente, lo implemento si es viable y le informo al cliente que su idea fue usada"
-    ]
-  },
-  {
-    module: 4, moduleName: "Innovación en Servicio",
-    text: "¿Tu equipo tiene un espacio real para proponer e implementar ideas de mejora en el servicio?",
-    opts: [
-      "No existe un proceso formal para canalizar ideas de mejora",
-      "Podemos sugerir ideas pero el proceso de implementación es lento y burocrático",
-      "Tenemos un sistema ágil donde las ideas se prueban rápidamente y se escalan si funcionan"
-    ]
-  },
-
-  // MÓDULO 5: FIDELIZACIÓN (3 preguntas)
-  {
-    module: 5, moduleName: "Fidelización",
-    text: "¿Sabes qué porcentaje de tus clientes son visitantes frecuentes vs. clientes nuevos?",
-    opts: [
-      "No tenemos esa información disponible actualmente",
-      "Tenemos una idea aproximada pero sin datos precisos ni confiables",
-      "Conocemos exactamente nuestros indicadores de retención y trabajamos activamente para mejorarlos"
-    ]
-  },
-  {
-    module: 5, moduleName: "Fidelización",
-    text: "¿Qué estrategia usas para convertir a un cliente de primera visita en un cliente que regrese?",
-    opts: [
-      "Confiamos en que si le gustó la experiencia, volverá por sí solo",
-      "Ofrecemos algún incentivo o descuento ocasional para motivar el retorno",
-      "Tenemos una estrategia clara de conversión de primera visita a relación de largo plazo"
-    ]
-  },
-  {
-    module: 5, moduleName: "Fidelización",
-    text: "¿Qué significa para ti ser un ImperialLover de corazón?",
-    opts: [
-      "Es un cliente frecuente que compra mucho en Plaza Imperial",
-      "Es alguien que tiene una afinidad especial con la marca del centro comercial",
-      "Es un embajador apasionado que vive y transmite los valores de Amistad, Familia y Amor en cada interacción"
-    ]
-  },
-
-  // MÓDULO 6: LIDERAZGO DE SERVICIO (3 preguntas)
-  {
-    module: 6, moduleName: "Liderazgo de Servicio",
-    text: "¿Cómo inspiras a las personas de tu equipo para dar un servicio genuinamente excepcional?",
-    opts: [
-      "Les recuerdo las reglas, procedimientos y consecuencias de no cumplirlos",
-      "Doy el ejemplo en mi día a día y reconozco cuando alguien hace bien su trabajo",
-      "Creo una cultura donde cada persona entiende el impacto de su rol en la experiencia total del cliente"
-    ]
-  },
-  {
-    module: 6, moduleName: "Liderazgo de Servicio",
-    text: "¿Con qué frecuencia tienes conversaciones genuinas con tu equipo sobre la experiencia del cliente?",
-    opts: [
-      "Rara vez — nuestras conversaciones se enfocan en metas operativas y ventas",
-      "Mensualmente, en reuniones de equipo formales",
-      "Es parte de nuestra conversación diaria — es nuestra razón de ser, no un tema aparte"
-    ]
-  },
-  {
-    module: 6, moduleName: "Liderazgo de Servicio",
-    text: "Cuando un miembro de tu equipo falla en la atención a un cliente, ¿cómo lo manejas?",
-    opts: [
-      "Lo corrijo o sanciono de acuerdo con el protocolo establecido",
-      "Hablo con él/ella para entender qué pasó y buscar soluciones",
-      "Lo convierto en un momento de aprendizaje colectivo que fortalece al equipo y mejora el sistema"
-    ]
-  },
-
-  // MÓDULO 7: CX DIGITAL (3 preguntas)
-  {
-    module: 7, moduleName: "CX Digital",
-    text: "¿La presencia digital de tu marca o local es coherente con la experiencia que ofreces en físico?",
-    opts: [
-      "Nuestra presencia digital es básica, desactualizada o poco coherente con lo que vivimos en tienda",
-      "Tenemos redes sociales activas pero no están totalmente alineadas con la experiencia física",
-      "Nuestra experiencia digital y física son coherentes y se complementan — creamos una experiencia omnicanal real"
-    ]
-  },
-  {
-    module: 7, moduleName: "CX Digital",
-    text: "¿Usas datos digitales (redes sociales, Google, reseñas) para mejorar la experiencia de tus clientes?",
-    opts: [
-      "No los revisamos regularmente — es algo pendiente en nuestra agenda",
-      "Los vemos ocasionalmente, principalmente para responder comentarios negativos",
-      "Los analizamos de forma sistemática para tomar decisiones que mejoran el CX continuamente"
-    ]
-  },
-  {
-    module: 7, moduleName: "CX Digital",
-    text: "Cuando recibes una reseña negativa de un cliente en plataformas digitales, ¿cómo respondes?",
-    opts: [
-      "Rara vez las respondemos — no hay un proceso definido para eso",
-      "Respondemos con una disculpa estándar y agradecemos el comentario",
-      "Respondemos de forma personalizada, resolvemos el problema específico y usamos la crítica para mejorar"
-    ]
-  },
-
-  // MÓDULO 8: MÉTRICAS Y KPIs (4 preguntas)
-  {
-    module: 8, moduleName: "Métricas y KPIs",
-    text: "¿Conoces y mides el NPS (Net Promoter Score) en tu negocio o área?",
-    opts: [
-      "No sé exactamente qué es el NPS o cómo se mide",
-      "Conozco el concepto pero no lo medimos de forma formal y sistemática",
-      "Lo medimos regularmente y es un indicador clave para nuestras decisiones estratégicas"
-    ]
-  },
-  {
-    module: 8, moduleName: "Métricas y KPIs",
-    text: "¿Tienes un sistema formal para medir la satisfacción de tus clientes de manera consistente?",
-    opts: [
-      "No contamos con un sistema de medición formal actualmente",
-      "Pedimos feedback de vez en cuando pero no de manera sistemática",
-      "Tenemos un sistema robusto de medición que nos permite mejorar de forma continua y basada en datos"
-    ]
-  },
-  {
-    module: 8, moduleName: "Métricas y KPIs",
-    text: "¿Cuáles indicadores de experiencia del cliente mides hoy en tu operación?",
-    opts: [
-      "No medimos indicadores de CX de manera formal — nos guiamos por intuición",
-      "Medimos principalmente ventas, pero poco relacionado directamente con la experiencia del cliente",
-      "Medimos NPS, CSAT, tiempo de atención, tasa de retorno y otros KPIs clave de CX regularmente"
-    ]
-  },
-  {
-    module: 8, moduleName: "Métricas y KPIs",
-    text: "¿Cómo usas los datos y métricas de CX para tomar decisiones en tu negocio?",
-    opts: [
-      "Las decisiones se toman principalmente por intuición, experiencia y criterio personal",
-      "Los datos influyen en algunas decisiones pero no son la base principal de nuestra estrategia",
-      "Los datos de CX son fundamentales y no tomamos decisiones estratégicas sin respaldo en evidencia"
-    ]
-  }
-];
-
-const MODULES = [
-  { id: 1, name: "Fundamentos CX", max: 12 },
-  { id: 2, name: "Customer Journey", max: 12 },
-  { id: 3, name: "Peak-End Rule", max: 12 },
-  { id: 4, name: "Innovación", max: 12 },
-  { id: 5, name: "Fidelización", max: 12 },
-  { id: 6, name: "Liderazgo", max: 12 },
-  { id: 7, name: "CX Digital", max: 12 },
-  { id: 8, name: "Métricas y KPIs", max: 16 }
-];
-
-const LEVELS = [
-  {
-    key: "principiante",
-    name: "ImperialLover Principiante",
-    badge: "🌱 En Inicio",
-    min: 0, max: 33,
-    cssClass: "level-principiante",
-    pillClass: "pill-p",
-    message: "¡Bienvenido/a al inicio de un gran camino! Tienes una base valiosa y este Diplomado es exactamente el impulso que necesitas para transformar tu manera de ver y crear experiencias. Cada gran ImperialLover comenzó desde aquí.",
-    emoji: "🌱"
-  },
-  {
-    key: "formacion",
-    name: "ImperialLover en Formación",
-    badge: "⭐ En Formación",
-    min: 34, max: 66,
-    cssClass: "level-formacion",
-    pillClass: "pill-f",
-    message: "¡Vas por muy buen camino! Ya tienes consciencia sobre la experiencia del cliente y aplicas principios importantes. Este Diplomado te dará las herramientas y el lenguaje para llevar tu CX al siguiente nivel con consistencia y estrategia.",
-    emoji: "⭐"
-  },
-  {
-    key: "experto",
-    name: "ImperialLover Experto",
-    badge: "🏆 ImperialLover Experto",
-    min: 67, max: 100,
-    cssClass: "level-experto",
-    pillClass: "pill-e",
-    message: "¡Eres un verdadero ImperialLover de corazón! Tienes una mentalidad orientada al cliente muy desarrollada. En el Diplomado serás un referente para tus compañeros — y juntos elevaremos toda la experiencia de Plaza Imperial a un nivel extraordinario.",
-    emoji: "🏆"
-  }
-];
-
-const STORAGE_KEY = "imperiallovers_responses_v1";
+/* ══════════════════════════════════
+   BACKEND
+══════════════════════════════════ */
+const BLOB_ID = "019db47c-74be-737c-8243-be4f20161631";
+const BLOB_BASE = "https://jsonblob.com/api/jsonBlob/" + BLOB_ID;
 const ADMIN_PWD = "imperial2026";
 
-/* ──────────────────────────────
+async function saveToCloud(record) {
+  try {
+    const res = await fetch(BLOB_BASE, { headers: { Accept: "application/json" } });
+    const data = await res.json();
+    const responses = data.responses || [];
+    responses.push(record);
+    await fetch(BLOB_BASE, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ ...data, responses })
+    });
+    return true;
+  } catch (e) {
+    console.error("Cloud save failed:", e);
+    // fallback to localStorage
+    const local = JSON.parse(localStorage.getItem("il_backup") || "[]");
+    local.push(record);
+    localStorage.setItem("il_backup", JSON.stringify(local));
+    return false;
+  }
+}
+
+async function loadFromCloud() {
+  const res = await fetch(BLOB_BASE, { headers: { Accept: "application/json" } });
+  const data = await res.json();
+  return data.responses || [];
+}
+
+/* ══════════════════════════════════
+   QUESTIONS
+══════════════════════════════════ */
+const QS = [
+  {m:1,mn:"Fundamentos CX",t:"¿Qué significa para ti la Experiencia del Consumidor (CX)?",o:["Es básicamente el servicio al cliente que damos en el mostrador","Es el conjunto de interacciones que tiene el cliente con nuestra empresa","Es cada percepción, emoción y recuerdo que el cliente construye en toda su relación con la marca"]},
+  {m:1,mn:"Fundamentos CX",t:"¿Con qué frecuencia piensas en la experiencia del cliente antes de tomar decisiones en tu trabajo?",o:["Rara vez — me enfoco en las tareas operativas del día a día","A veces, especialmente cuando hay quejas o problemas visibles","Siempre — el cliente es el centro de cada decisión que tomamos en mi equipo"]},
+  {m:1,mn:"Fundamentos CX",t:"¿Cómo describes la cultura de servicio en tu área de trabajo hoy?",o:["Aún estamos aprendiendo qué significa un servicio realmente excepcional","Tenemos buenas intenciones pero no siempre somos consistentes en la ejecución","Vivimos una cultura de servicio genuina donde cada persona sabe que marca la diferencia"]},
+  {m:2,mn:"Customer Journey",t:"¿Tienes identificados los momentos clave del recorrido de tu cliente en Plaza Imperial?",o:["No los tengo mapeados con claridad todavía","Conozco algunos puntos de contacto pero no el journey completo","Tengo mapeado el journey completo e identifico los momentos que más importan para el cliente"]},
+  {m:2,mn:"Customer Journey",t:"Si un cliente entra y sale sin lograr lo que buscaba, ¿qué haces?",o:["Es algo normal — no todos encuentran lo que necesitan","Intento identificar si hubo algo que pudimos haber hecho diferente","Analizo cada punto del recorrido para mejorar su próxima visita y evitar que se repita"]},
+  {m:2,mn:"Customer Journey",t:"¿Qué tan fácil es para un cliente encontrar lo que busca en tu espacio de trabajo?",o:["No lo hemos medido formalmente — asumimos que está bien","Creemos que es fácil, pero no tenemos datos claros","Hemos optimizado cada punto del recorrido basados en feedback real de clientes"]},
+  {m:3,mn:"Peak-End Rule",t:"¿Conoces y aplicas la 'Regla Pico-Final' (Peak-End Rule) en tu trabajo?",o:["No la conozco — es la primera vez que escucho ese término","He escuchado algo al respecto pero no la aplico conscientemente","La conozco bien y diseño momentos pico y cierres memorables para mis clientes"]},
+  {m:3,mn:"Peak-End Rule",t:"¿Cuál es el momento más memorable que vive un cliente al interactuar con tu marca?",o:["Honestamente no lo sé — no lo hemos identificado","Tengo una idea general pero no la he validado con los clientes reales","Lo tenemos identificado, diseñado y optimizado para generar momentos WOW constantemente"]},
+  {m:3,mn:"Peak-End Rule",t:"¿Cómo termina la experiencia de un cliente cuando interactúa con tu equipo?",o:["Se va sin ningún elemento diferencial de cierre — la despedida es estándar","A veces hacemos algo especial para despedirlos, pero no es consistente","Tenemos un ritual de cierre diseñado: el cliente siempre se va con una sonrisa y ganas de volver"]},
+  {m:4,mn:"Innovación en Servicio",t:"¿Cuándo fue la última vez que innovaste genuinamente en la forma de atender a tus clientes?",o:["No recuerdo — tendemos a hacer las cosas como siempre se han hecho","Hace algunos meses probamos algo diferente con resultados mixtos","Constantemente — experimentamos nuevas formas de sorprender y deleitar a nuestros clientes"]},
+  {m:4,mn:"Innovación en Servicio",t:"¿Cómo reaccionas cuando un cliente te sugiere una mejora en el servicio?",o:["Lo escucho con amabilidad pero rara vez implemento los cambios sugeridos","Lo analizo y a veces hago ajustes si tiene sentido operativo","Lo valoro, lo implemento si es viable y le informo al cliente que su idea fue usada"]},
+  {m:4,mn:"Innovación en Servicio",t:"¿Tu equipo tiene un espacio real para proponer e implementar ideas de mejora?",o:["No existe un proceso formal para canalizar ideas de mejora","Podemos sugerir ideas pero el proceso de implementación es lento y burocrático","Tenemos un sistema ágil donde las ideas se prueban rápidamente y se escalan si funcionan"]},
+  {m:5,mn:"Fidelización",t:"¿Sabes qué porcentaje de tus clientes son visitantes frecuentes vs. nuevos?",o:["No tenemos esa información disponible actualmente","Tenemos una idea aproximada pero sin datos precisos ni confiables","Conocemos nuestros indicadores de retención y trabajamos activamente para mejorarlos"]},
+  {m:5,mn:"Fidelización",t:"¿Qué estrategia usas para convertir una primera visita en un cliente que regrese?",o:["Confiamos en que si le gustó la experiencia, volverá por sí solo","Ofrecemos algún incentivo o descuento ocasional para motivar el retorno","Tenemos una estrategia clara de conversión de primera visita a relación de largo plazo"]},
+  {m:5,mn:"Fidelización",t:"¿Qué significa para ti ser un ImperialLover de corazón?",o:["Es un cliente frecuente que compra mucho en Plaza Imperial","Es alguien que tiene una afinidad especial con la marca del centro comercial","Es un embajador apasionado que vive y transmite los valores de Amistad, Familia y Amor en cada interacción"]},
+  {m:6,mn:"Liderazgo de Servicio",t:"¿Cómo inspiras a tu equipo para dar un servicio genuinamente excepcional?",o:["Les recuerdo las reglas, procedimientos y consecuencias de no cumplirlos","Doy el ejemplo en mi día a día y reconozco cuando alguien hace bien su trabajo","Creo una cultura donde cada persona entiende el impacto de su rol en la experiencia total del cliente"]},
+  {m:6,mn:"Liderazgo de Servicio",t:"¿Con qué frecuencia tienes conversaciones genuinas con tu equipo sobre la experiencia del cliente?",o:["Rara vez — nuestras conversaciones se enfocan en metas operativas y ventas","Mensualmente, en reuniones de equipo formales","Es parte de nuestra conversación diaria — es nuestra razón de ser"]},
+  {m:6,mn:"Liderazgo de Servicio",t:"Cuando un miembro de tu equipo falla en la atención a un cliente, ¿cómo lo manejas?",o:["Lo corrijo o sanciono de acuerdo con el protocolo establecido","Hablo con él/ella para entender qué pasó y buscar soluciones","Lo convierto en un momento de aprendizaje colectivo que fortalece al equipo y mejora el sistema"]},
+  {m:7,mn:"CX Digital",t:"¿La presencia digital de tu marca es coherente con la experiencia que ofreces en físico?",o:["Nuestra presencia digital es básica, desactualizada o poco coherente con lo que vivimos en tienda","Tenemos redes sociales activas pero no están totalmente alineadas con la experiencia física","Nuestra experiencia digital y física son coherentes — creamos una experiencia omnicanal real"]},
+  {m:7,mn:"CX Digital",t:"¿Usas datos digitales (redes, Google, reseñas) para mejorar la experiencia de tus clientes?",o:["No los revisamos regularmente — es algo pendiente en nuestra agenda","Los vemos ocasionalmente, principalmente para responder comentarios negativos","Los analizamos de forma sistemática para tomar decisiones que mejoran el CX continuamente"]},
+  {m:7,mn:"CX Digital",t:"Cuando recibes una reseña negativa en plataformas digitales, ¿cómo respondes?",o:["Rara vez las respondemos — no hay un proceso definido para eso","Respondemos con una disculpa estándar y agradecemos el comentario","Respondemos de forma personalizada, resolvemos el problema y usamos la crítica para mejorar"]},
+  {m:8,mn:"Métricas y KPIs",t:"¿Conoces y mides el NPS (Net Promoter Score) en tu negocio o área?",o:["No sé exactamente qué es el NPS o cómo se mide","Conozco el concepto pero no lo medimos de forma formal y sistemática","Lo medimos regularmente y es un indicador clave para nuestras decisiones estratégicas"]},
+  {m:8,mn:"Métricas y KPIs",t:"¿Tienes un sistema formal para medir la satisfacción de tus clientes consistentemente?",o:["No contamos con un sistema de medición formal actualmente","Pedimos feedback de vez en cuando pero no de manera sistemática","Tenemos un sistema robusto de medición que nos permite mejorar de forma continua y basada en datos"]},
+  {m:8,mn:"Métricas y KPIs",t:"¿Cuáles indicadores de experiencia del cliente mides hoy en tu operación?",o:["No medimos indicadores de CX de manera formal — nos guiamos por intuición","Medimos principalmente ventas, pero poco relacionado directamente con la experiencia del cliente","Medimos NPS, CSAT, tiempo de atención, tasa de retorno y otros KPIs clave de CX regularmente"]},
+  {m:8,mn:"Métricas y KPIs",t:"¿Cómo usas los datos y métricas de CX para tomar decisiones en tu negocio?",o:["Las decisiones se toman principalmente por intuición, experiencia y criterio personal","Los datos influyen en algunas decisiones pero no son la base principal de nuestra estrategia","Los datos de CX son fundamentales y no tomamos decisiones estratégicas sin respaldo en evidencia"]}
+];
+
+const MODS = [
+  {id:1,name:"Fundamentos CX",max:12},
+  {id:2,name:"Customer Journey",max:12},
+  {id:3,name:"Peak-End Rule",max:12},
+  {id:4,name:"Innovación",max:12},
+  {id:5,name:"Fidelización",max:12},
+  {id:6,name:"Liderazgo",max:12},
+  {id:7,name:"CX Digital",max:12},
+  {id:8,name:"Métricas y KPIs",max:16}
+];
+
+const LVLS = [
+  {key:"p",name:"ImperialLover Principiante",badge:"🌱 En Inicio",cssClass:"lv-p",pillClass:"pill-p",emoji:"🌱",min:0,max:33,
+   msg:"¡Bienvenido/a al inicio de un gran camino! Tienes una base valiosa y este Diplomado es exactamente el impulso que necesitas para transformar tu manera de ver y crear experiencias. Cada gran ImperialLover comenzó desde aquí."},
+  {key:"f",name:"ImperialLover en Formación",badge:"⭐ En Formación",cssClass:"lv-f",pillClass:"pill-f",emoji:"⭐",min:34,max:66,
+   msg:"¡Vas por muy buen camino! Ya tienes consciencia sobre la experiencia del cliente y aplicas principios importantes. Este Diplomado te dará las herramientas para llevar tu CX al siguiente nivel con consistencia y estrategia."},
+  {key:"e",name:"ImperialLover Experto",badge:"🏆 ImperialLover Experto",cssClass:"lv-e",pillClass:"pill-e",emoji:"🏆",min:67,max:100,
+   msg:"¡Eres un verdadero ImperialLover de corazón! Tienes una mentalidad orientada al cliente muy desarrollada. En el Diplomado serás un referente para tus compañeros — y juntos elevaremos toda la experiencia de Plaza Imperial a un nivel extraordinario."}
+];
+
+/* ══════════════════════════════════
    STATE
-────────────────────────────── */
-let state = {
-  participant: { nombre: "", email: "", tienda: "", rol: "" },
+══════════════════════════════════ */
+let S = {
+  participant: {},
   currentQ: 0,
-  answers: new Array(QUESTIONS.length).fill(null),
-  radarChart: null
+  answers: new Array(QS.length).fill(null),
+  chart: null
 };
 
-/* ──────────────────────────────
+/* ══════════════════════════════════
    ROUTING
-────────────────────────────── */
+══════════════════════════════════ */
 function showView(id) {
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.getElementById("view-" + id).classList.add("active");
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-/* ──────────────────────────────
-   INTRO → START
-────────────────────────────── */
+/* ══════════════════════════════════
+   INTRO
+══════════════════════════════════ */
 function startQuiz() {
-  const nombre = document.getElementById("inp-nombre").value.trim();
-  const email = document.getElementById("inp-email").value.trim();
-  const tienda = document.getElementById("inp-tienda").value.trim();
-  const rol = document.getElementById("inp-rol").value;
-
-  if (!nombre) return showToast("Por favor escribe tu nombre completo");
-  if (!email || !email.includes("@")) return showToast("Por favor escribe un correo válido");
-
-  state.participant = { nombre, email, tienda, rol };
-  state.currentQ = 0;
-  state.answers = new Array(QUESTIONS.length).fill(null);
-
+  const nombre = document.getElementById("i-nombre").value.trim();
+  const email = document.getElementById("i-email").value.trim();
+  if (!nombre) return toast("Por favor escribe tu nombre completo");
+  if (!email || !email.includes("@")) return toast("Por favor escribe un correo válido");
+  S.participant = {
+    nombre, email,
+    tienda: document.getElementById("i-tienda").value.trim(),
+    rol: document.getElementById("i-rol").value
+  };
+  S.currentQ = 0;
+  S.answers = new Array(QS.length).fill(null);
   showView("quiz");
-  renderQuestion();
+  renderQ();
 }
 
-/* ──────────────────────────────
+/* ══════════════════════════════════
    QUIZ
-────────────────────────────── */
-function renderQuestion() {
-  const q = QUESTIONS[state.currentQ];
-  const total = QUESTIONS.length;
-  const idx = state.currentQ;
+══════════════════════════════════ */
+function renderQ() {
+  const q = QS[S.currentQ];
+  const i = S.currentQ;
+  const n = QS.length;
+  document.getElementById("q-mod").textContent = `Módulo ${q.m}: ${q.mn}`;
+  document.getElementById("q-cnt").textContent = `${i+1} / ${n}`;
+  document.getElementById("prog-fill").style.width = `${((i+1)/n)*100}%`;
+  document.getElementById("q-num").textContent = `Pregunta ${i+1}`;
+  document.getElementById("q-text").textContent = q.t;
 
-  // Progress
-  document.getElementById("q-module-label").textContent = `Módulo ${q.module}: ${q.moduleName}`;
-  document.getElementById("q-count-label").textContent = `${idx + 1} / ${total}`;
-  document.getElementById("progress-fill").style.width = `${((idx + 1) / total) * 100}%`;
-
-  // Question
-  document.getElementById("q-number").textContent = `Pregunta ${idx + 1}`;
-  document.getElementById("q-text").textContent = q.text;
-
-  // Options
-  const container = document.getElementById("options-list");
+  const container = document.getElementById("opts");
   container.innerHTML = "";
-  const letters = ["A", "B", "C"];
-  q.opts.forEach((opt, i) => {
+  ["A","B","C"].forEach((ltr, j) => {
     const btn = document.createElement("button");
-    btn.className = "option-btn" + (state.answers[idx] === i ? " selected" : "");
-    btn.innerHTML = `<span class="opt-letter">${letters[i]}</span><span class="opt-text">${opt}</span>`;
-    btn.onclick = () => selectOption(i);
+    btn.className = "opt" + (S.answers[i] === j ? " sel" : "");
+    btn.innerHTML = `<span class="opt-letter">${ltr}</span><span class="opt-text">${q.o[j]}</span>`;
+    btn.onclick = () => selectOpt(j);
     container.appendChild(btn);
   });
 
-  // Navigation
-  document.getElementById("btn-prev").style.display = idx === 0 ? "none" : "block";
+  document.getElementById("btn-prev").style.display = i === 0 ? "none" : "";
   updateNextBtn();
 
-  // Animate
-  const card = document.getElementById("question-card");
+  const card = document.getElementById("q-card");
   card.style.animation = "none";
   void card.offsetWidth;
-  card.style.animation = "slideIn 0.35s ease";
+  card.style.animation = "fadeUp .35s ease";
 }
 
-function selectOption(i) {
-  state.answers[state.currentQ] = i;
-  document.querySelectorAll(".option-btn").forEach((btn, j) => {
-    btn.classList.toggle("selected", j === i);
-  });
+function selectOpt(j) {
+  S.answers[S.currentQ] = j;
+  document.querySelectorAll(".opt").forEach((b, k) => b.classList.toggle("sel", k === j));
   updateNextBtn();
 }
 
 function updateNextBtn() {
   const btn = document.getElementById("btn-next");
-  const isLast = state.currentQ === QUESTIONS.length - 1;
-  const hasAnswer = state.answers[state.currentQ] !== null;
-  btn.disabled = !hasAnswer;
-  btn.textContent = isLast ? "Ver mi resultado →" : "Siguiente →";
+  const last = S.currentQ === QS.length - 1;
+  btn.disabled = S.answers[S.currentQ] === null;
+  btn.textContent = last ? "Ver mi resultado ✨" : "Siguiente →";
 }
 
-function nextQuestion() {
-  if (state.answers[state.currentQ] === null) return;
-  if (state.currentQ < QUESTIONS.length - 1) {
-    state.currentQ++;
-    renderQuestion();
-  } else {
-    finishQuiz();
-  }
+function nextQ() {
+  if (S.answers[S.currentQ] === null) return;
+  if (S.currentQ < QS.length - 1) { S.currentQ++; renderQ(); }
+  else finish();
 }
 
-function prevQuestion() {
-  if (state.currentQ > 0) {
-    state.currentQ--;
-    renderQuestion();
-  }
+function prevQ() {
+  if (S.currentQ > 0) { S.currentQ--; renderQ(); }
 }
 
-/* ──────────────────────────────
-   SCORING & RESULT
-────────────────────────────── */
-function computeScore() {
-  // A=0, B=2, C=4 per question
-  const pts = [0, 2, 4];
-  const total = state.answers.reduce((sum, a) => sum + (a !== null ? pts[a] : 0), 0);
-
-  // Per-module scores
+/* ══════════════════════════════════
+   SCORING
+══════════════════════════════════ */
+function compute() {
+  const pts = [0,2,4];
+  const total = S.answers.reduce((s,a) => s + (a!==null ? pts[a] : 0), 0);
   const modScores = {};
-  MODULES.forEach(m => { modScores[m.id] = 0; });
-  QUESTIONS.forEach((q, i) => {
-    if (state.answers[i] !== null) modScores[q.module] += pts[state.answers[i]];
-  });
-
+  MODS.forEach(m => { modScores[m.id] = 0; });
+  QS.forEach((q,i) => { if (S.answers[i]!==null) modScores[q.m] += pts[S.answers[i]]; });
   return { total, modScores };
 }
 
 function getLevel(score) {
-  return LEVELS.find(l => score >= l.min && score <= l.max) || LEVELS[0];
+  return LVLS.find(l => score >= l.min && score <= l.max) || LVLS[0];
 }
 
-function finishQuiz() {
-  const { total, modScores } = computeScore();
-  const level = getLevel(total);
-  const participant = state.participant;
+/* ══════════════════════════════════
+   FINISH & RESULT
+══════════════════════════════════ */
+async function finish() {
+  const { total, modScores } = compute();
+  const lvl = getLevel(total);
+  const p = S.participant;
 
-  // Save to localStorage
   const record = {
     id: Date.now().toString(36) + Math.random().toString(36).slice(2),
     timestamp: new Date().toISOString(),
-    nombre: participant.nombre,
-    email: participant.email,
-    tienda: participant.tienda,
-    rol: participant.rol,
+    nombre: p.nombre,
+    email: p.email,
+    tienda: p.tienda,
+    rol: p.rol,
     score: total,
-    nivel: level.name,
-    nivelKey: level.key,
-    respuestas: state.answers.map(a => ["A","B","C"][a] || ""),
-    modulos: MODULES.map(m => ({ id: m.id, name: m.name, score: modScores[m.id], max: m.max }))
+    nivel: lvl.name,
+    nivelKey: lvl.key,
+    respuestas: S.answers.map(a => ["A","B","C"][a] || ""),
+    modulos: MODS.map(m => ({ id: m.id, name: m.name, score: modScores[m.id], max: m.max }))
   };
-  saveRecord(record);
+
+  // Show saving overlay
+  document.getElementById("saving-overlay").classList.add("show");
+  await saveToCloud(record);
+  document.getElementById("saving-overlay").classList.remove("show");
 
   // Render result
-  const hero = document.getElementById("result-hero");
-  hero.className = "result-hero " + level.cssClass;
+  renderResult(total, lvl, modScores, p.nombre);
+}
 
-  document.getElementById("result-badge").textContent = level.badge;
-  document.getElementById("result-score-num").textContent = total;
-  document.getElementById("result-name-display").textContent = participant.nombre.split(" ")[0] + ",";
-  document.getElementById("result-level-name").textContent = level.name;
-  document.getElementById("result-message").textContent = level.message;
+function renderResult(total, lvl, modScores, nombre) {
+  const hero = document.getElementById("res-hero");
+  hero.className = "glass-strong res-hero " + lvl.cssClass;
+
+  document.getElementById("res-badge").textContent = lvl.badge;
+  document.getElementById("res-circle").className = "score-circle"; // reset
+  requestAnimationFrame(() => {
+    document.getElementById("res-circle").className = "score-circle " + (lvl.cssClass || "");
+  });
+
+  // Animated counter
+  let count = 0;
+  const scoreEl = document.getElementById("res-score");
+  const tick = setInterval(() => {
+    count = Math.min(count + Math.ceil(total / 30), total);
+    scoreEl.textContent = count;
+    if (count >= total) clearInterval(tick);
+  }, 40);
+
+  document.getElementById("res-name").textContent = nombre.split(" ")[0] + ",";
+  document.getElementById("res-level").textContent = lvl.name;
+  document.getElementById("res-msg").textContent = lvl.msg;
 
   // Module bars
-  const barsEl = document.getElementById("modules-bars");
-  barsEl.innerHTML = "";
-  MODULES.forEach(m => {
+  const barsList = document.getElementById("bars-list");
+  barsList.innerHTML = "";
+  MODS.forEach(m => {
     const pct = Math.round((modScores[m.id] / m.max) * 100);
     const row = document.createElement("div");
-    row.className = "mod-bar-row";
+    row.className = "bar-row";
     row.innerHTML = `
-      <span class="mod-bar-label">${m.name}</span>
-      <div class="mod-bar-track"><div class="mod-bar-fill" style="width:0%" data-pct="${pct}"></div></div>
-      <span class="mod-bar-pct">${pct}%</span>
-    `;
-    barsEl.appendChild(row);
+      <span class="bar-lbl">${m.name}</span>
+      <div class="bar-track"><div class="bar-fill" style="width:0%" data-pct="${pct}"></div></div>
+      <span class="bar-pct">${pct}%</span>`;
+    barsList.appendChild(row);
   });
 
   showView("result");
 
   // Animate bars
   setTimeout(() => {
-    document.querySelectorAll(".mod-bar-fill").forEach(el => {
+    document.querySelectorAll(".bar-fill").forEach(el => {
       el.style.width = el.dataset.pct + "%";
     });
-  }, 200);
+  }, 300);
 
   // Radar chart
-  renderRadarChart(modScores);
-}
-
-function renderRadarChart(modScores) {
-  if (state.radarChart) { state.radarChart.destroy(); state.radarChart = null; }
-  const ctx = document.getElementById("radar-chart").getContext("2d");
-  const labels = MODULES.map(m => m.name);
-  const data = MODULES.map(m => Math.round((modScores[m.id] / m.max) * 100));
-
-  state.radarChart = new Chart(ctx, {
+  if (S.chart) { S.chart.destroy(); S.chart = null; }
+  const ctx = document.getElementById("radar").getContext("2d");
+  S.chart = new Chart(ctx, {
     type: "radar",
     data: {
-      labels,
+      labels: MODS.map(m => m.name),
       datasets: [{
         label: "Tu perfil CX",
-        data,
-        backgroundColor: "rgba(0,48,135,0.12)",
-        borderColor: "#003087",
-        borderWidth: 2.5,
-        pointBackgroundColor: "#E8401C",
-        pointBorderColor: "#fff",
+        data: MODS.map(m => Math.round((modScores[m.id] / m.max) * 100)),
+        backgroundColor: "rgba(232,64,28,0.1)",
+        borderColor: "rgba(232,64,28,0.8)",
+        borderWidth: 2,
+        pointBackgroundColor: "#D4A847",
+        pointBorderColor: "#08101f",
         pointBorderWidth: 2,
         pointRadius: 5
       }]
@@ -1469,186 +959,227 @@ function renderRadarChart(modScores) {
       scales: {
         r: {
           min: 0, max: 100,
-          ticks: { stepSize: 25, font: { size: 10 }, color: "#888", backdropColor: "transparent" },
-          pointLabels: { font: { size: 11, weight: "600" }, color: "#003087" },
-          grid: { color: "rgba(0,48,135,0.1)" },
-          angleLines: { color: "rgba(0,48,135,0.1)" }
+          ticks: { stepSize: 25, font: { size: 9 }, color: "rgba(255,255,255,0.35)", backdropColor: "transparent" },
+          pointLabels: { font: { size: 10, weight: "700" }, color: "rgba(255,255,255,0.7)" },
+          grid: { color: "rgba(255,255,255,0.07)" },
+          angleLines: { color: "rgba(255,255,255,0.07)" }
         }
       },
-      plugins: {
-        legend: { display: false }
-      }
+      plugins: { legend: { display: false } }
     }
   });
+
+  // Confetti for experts
+  if (total >= 67) confetti();
 }
 
 function restartQuiz() {
-  state.currentQ = 0;
-  state.answers = new Array(QUESTIONS.length).fill(null);
+  S.currentQ = 0;
+  S.answers = new Array(QS.length).fill(null);
   showView("intro");
-  // Reset form
-  ["inp-nombre","inp-email","inp-tienda"].forEach(id => document.getElementById(id).value = "");
-  document.getElementById("inp-rol").value = "";
+  ["i-nombre","i-email","i-tienda"].forEach(id => document.getElementById(id).value = "");
+  document.getElementById("i-rol").value = "";
 }
 
-/* ──────────────────────────────
-   STORAGE
-────────────────────────────── */
-function getRecords() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-  catch { return []; }
-}
-
-function saveRecord(record) {
-  const records = getRecords();
-  records.push(record);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
-
-/* ──────────────────────────────
-   ADMIN PANEL
-────────────────────────────── */
+/* ══════════════════════════════════
+   ADMIN
+══════════════════════════════════ */
 function checkAdmin() {
-  const pwd = document.getElementById("admin-pwd-input").value;
+  const pwd = document.getElementById("pwd-in").value;
   if (pwd === ADMIN_PWD) {
-    document.getElementById("admin-login-section").style.display = "none";
-    document.getElementById("admin-panel-section").style.display = "block";
-    renderAdmin();
+    document.getElementById("admin-login-wrap").style.display = "none";
+    document.getElementById("admin-panel").style.display = "block";
+    loadAdmin();
   } else {
-    showToast("Contraseña incorrecta. Intenta de nuevo.");
-    document.getElementById("admin-pwd-input").value = "";
+    toast("Contraseña incorrecta");
+    document.getElementById("pwd-in").value = "";
   }
 }
 
-function renderAdmin() {
-  const records = getRecords();
-
-  // Stats
-  const statsEl = document.getElementById("admin-stats");
-  if (records.length === 0) {
-    statsEl.innerHTML = "";
-  } else {
-    const avg = Math.round(records.reduce((s, r) => s + r.score, 0) / records.length);
-    const counts = { principiante: 0, formacion: 0, experto: 0 };
-    records.forEach(r => { if (counts[r.nivelKey] !== undefined) counts[r.nivelKey]++; });
-    statsEl.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-label">Total participantes</div>
-        <div class="stat-value">${records.length}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Promedio grupal</div>
-        <div class="stat-value">${avg}<span style="font-size:1rem;color:#888"> pts</span></div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">🌱 Principiante</div>
-        <div class="stat-value">${counts.principiante}</div>
-        <div class="stat-sub">${records.length ? Math.round(counts.principiante/records.length*100) : 0}% del grupo</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">⭐ En Formación</div>
-        <div class="stat-value">${counts.formacion}</div>
-        <div class="stat-sub">${records.length ? Math.round(counts.formacion/records.length*100) : 0}% del grupo</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">🏆 Experto</div>
-        <div class="stat-value">${counts.experto}</div>
-        <div class="stat-sub">${records.length ? Math.round(counts.experto/records.length*100) : 0}% del grupo</div>
-      </div>
-    `;
+async function loadAdmin() {
+  try {
+    toast("Cargando datos...");
+    const records = await loadFromCloud();
+    renderAdmin(records);
+  } catch(e) {
+    toast("Error al cargar datos — revisa tu conexión");
   }
+}
 
-  // Table
-  const tbody = document.getElementById("responses-tbody");
-  if (records.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="16"><div class="empty-state"><div class="empty-icon">📋</div><p>Aún no hay respuestas registradas</p></div></td></tr>`;
+function renderAdmin(records) {
+  // Stats
+  const stats = document.getElementById("admin-stats");
+  if (!records.length) {
+    stats.innerHTML = "";
+    document.getElementById("admin-tbody").innerHTML = `<tr><td colspan="16"><div class="empty"><div class="empty-ico">📋</div><p>Aún no hay respuestas registradas</p></div></td></tr>`;
     return;
   }
+  const avg = Math.round(records.reduce((s,r) => s + r.score, 0) / records.length);
+  const cnt = {p:0,f:0,e:0};
+  records.forEach(r => { if(cnt[r.nivelKey]!==undefined) cnt[r.nivelKey]++; });
+  const pct = k => records.length ? Math.round(cnt[k]/records.length*100) : 0;
 
+  stats.innerHTML = `
+    <div class="glass stat"><div class="stat-lbl">Total</div><div class="stat-val">${records.length}</div><div class="stat-sub">participantes</div></div>
+    <div class="glass stat"><div class="stat-lbl">Promedio</div><div class="stat-val" style="background:linear-gradient(135deg,#E8401C,#D4A847);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${avg}</div><div class="stat-sub">puntos del grupo</div></div>
+    <div class="glass stat"><div class="stat-lbl">🌱 Principiante</div><div class="stat-val" style="color:#ffb347">${cnt.p}</div><div class="stat-sub">${pct("p")}% del grupo</div></div>
+    <div class="glass stat"><div class="stat-lbl">⭐ En Formación</div><div class="stat-val" style="color:#66ccff">${cnt.f}</div><div class="stat-sub">${pct("f")}% del grupo</div></div>
+    <div class="glass stat"><div class="stat-lbl">🏆 Experto</div><div class="stat-val" style="color:#00d48a">${cnt.e}</div><div class="stat-sub">${pct("e")}% del grupo</div></div>
+  `;
+
+  const lvlMeta = {p:{cls:"pill-p",lbl:"Principiante"},f:{cls:"pill-f",lbl:"En Formación"},e:{cls:"pill-e",lbl:"Experto"}};
+  const tbody = document.getElementById("admin-tbody");
   tbody.innerHTML = records.map((r, i) => {
-    const lvl = LEVELS.find(l => l.key === r.nivelKey) || LEVELS[0];
-    const modScores = r.modulos ? r.modulos.map(m => `<td style="text-align:center">${m.score}/${m.max}</td>`).join("") : "<td colspan='8'>-</td>";
-    const date = new Date(r.timestamp).toLocaleDateString("es-CO", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit" });
+    const lm = lvlMeta[r.nivelKey] || lvlMeta.p;
+    const mods = r.modulos ? r.modulos.map(m => `<td style="text-align:center;color:var(--t2)">${m.score}/${m.max}</td>`).join("") : "<td colspan='8'>—</td>";
+    const date = new Date(r.timestamp).toLocaleDateString("es-CO", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
     return `<tr>
-      <td style="font-weight:700;color:var(--navy)">${i+1}</td>
-      <td style="font-weight:600">${r.nombre}</td>
-      <td style="color:var(--gray);font-size:0.78rem">${r.email}</td>
-      <td>${r.tienda || "—"}</td>
-      <td>${r.rol || "—"}</td>
-      <td>
-        <div class="score-bar-mini">
-          <div class="score-bar-mini-track"><div class="score-bar-mini-fill" style="width:${r.score}%"></div></div>
-          <strong>${r.score}</strong>
-        </div>
-      </td>
-      <td><span class="level-pill ${lvl.pillClass}">${lvl.emoji} ${lvl.key === 'principiante' ? 'Principiante' : lvl.key === 'formacion' ? 'En Formación' : 'Experto'}</span></td>
-      ${modScores}
-      <td style="color:var(--gray);font-size:0.75rem;white-space:nowrap">${date}</td>
+      <td style="font-weight:800;color:var(--t2)">${i+1}</td>
+      <td style="font-weight:700">${r.nombre}</td>
+      <td style="color:var(--t3);font-size:0.75rem">${r.email}</td>
+      <td style="color:var(--t2)">${r.tienda||"—"}</td>
+      <td style="color:var(--t2)">${r.rol||"—"}</td>
+      <td><div class="mini-bar"><div class="mini-track"><div class="mini-fill" style="width:${r.score}%"></div></div><strong style="color:var(--gold)">${r.score}</strong></div></td>
+      <td><span class="pill ${lm.cls}">${lm.lbl}</span></td>
+      ${mods}
+      <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${date}</td>
     </tr>`;
   }).join("");
+  toast("✅ " + records.length + " respuestas cargadas");
 }
 
-function exportCSV() {
-  const records = getRecords();
-  if (records.length === 0) return showToast("No hay datos para exportar aún");
+async function exportCSV() {
+  const records = await loadFromCloud();
+  if (!records.length) return toast("No hay datos para exportar aún");
 
-  const headers = [
-    "N°","Nombre","Email","Local/Área","Rol","Score","Nivel",
-    "M1-CX","M2-Journey","M3-PeakEnd","M4-Innovación","M5-Fidelización",
-    "M6-Liderazgo","M7-Digital","M8-Métricas",
-    ...Array.from({length:25}, (_,i) => `P${i+1}`),
-    "Fecha"
-  ];
+  const hdrs = ["N°","Nombre","Email","Local/Área","Rol","Score","Nivel",
+    "M1-CX","M2-Journey","M3-PeakEnd","M4-Innovación","M5-Fidelización","M6-Liderazgo","M7-Digital","M8-Métricas",
+    ...Array.from({length:25}, (_,i) => `P${i+1}`), "Fecha"];
 
-  const rows = records.map((r, i) => {
-    const modVals = r.modulos ? r.modulos.map(m => `${m.score}/${m.max}`) : Array(8).fill("");
-    const answers = r.respuestas || [];
+  const rows = records.map((r,i) => {
+    const mods = r.modulos ? r.modulos.map(m => `${m.score}/${m.max}`) : Array(8).fill("");
     const date = new Date(r.timestamp).toLocaleString("es-CO");
-    return [i+1, r.nombre, r.email, r.tienda||"", r.rol||"", r.score, r.nivel, ...modVals, ...answers, date];
+    return [i+1, r.nombre, r.email, r.tienda||"", r.rol||"", r.score, r.nivel, ...mods, ...(r.respuestas||[]), date];
   });
 
-  const csvContent = [headers, ...rows]
-    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
-
-  const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+  const csv = [hdrs, ...rows].map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
   a.download = `ImperialLovers_Diagnostico_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast("✅ Archivo descargado. Ábrelo en Excel.");
+  toast("✅ Excel descargado — " + records.length + " respuestas");
 }
 
-function clearAll() {
-  if (!confirm("¿Estás seguro de que quieres eliminar TODOS los datos? Esta acción no se puede deshacer.")) return;
-  localStorage.removeItem(STORAGE_KEY);
-  renderAdmin();
-  showToast("🗑️ Datos eliminados");
+async function clearAll() {
+  if (!confirm("¿Eliminar TODOS los datos del servidor? Esta acción no se puede deshacer.")) return;
+  try {
+    await fetch(BLOB_BASE, {
+      method: "PUT",
+      headers: {"Content-Type":"application/json","Accept":"application/json"},
+      body: JSON.stringify({responses:[], diplomado:"Plaza Imperial x Poli 2026", cleared: new Date().toISOString()})
+    });
+    renderAdmin([]);
+    toast("🗑️ Datos eliminados del servidor");
+  } catch(e) { toast("Error al limpiar datos"); }
 }
 
-/* ──────────────────────────────
+/* ══════════════════════════════════
+   CONFETTI
+══════════════════════════════════ */
+function confetti() {
+  const colors = ["#E8401C","#D4A847","#00d48a","#00C8FF","#fff","#6ba3ff"];
+  for (let i = 0; i < 80; i++) {
+    setTimeout(() => {
+      const el = document.createElement("div");
+      el.className = "confetti-piece";
+      el.style.cssText = `
+        left:${Math.random()*100}vw;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        width:${6+Math.random()*8}px;
+        height:${6+Math.random()*8}px;
+        border-radius:${Math.random()>0.5?"50%":"2px"};
+        animation-duration:${2+Math.random()*2}s;
+        animation-delay:0s;
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 4500);
+    }, i * 30);
+  }
+}
+
+/* ══════════════════════════════════
+   PARTICLES
+══════════════════════════════════ */
+(function initParticles() {
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  let W, H, pts = [];
+
+  function resize() {
+    W = cv.width = window.innerWidth;
+    H = cv.height = window.innerHeight;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  for (let i = 0; i < 55; i++) {
+    pts.push({
+      x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random()-.5) * .4, vy: (Math.random()-.5) * .4,
+      r: 1 + Math.random() * 2,
+      a: Math.random()
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    pts.forEach(p => {
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+      if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(212,168,71,${p.a * .35})`;
+      ctx.fill();
+    });
+    // Lines between close particles
+    pts.forEach((a, i) => {
+      pts.slice(i+1).forEach(b => {
+        const d = Math.hypot(a.x-b.x, a.y-b.y);
+        if (d < 100) {
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = `rgba(212,168,71,${(1-d/100)*.08})`;
+          ctx.lineWidth = .5;
+          ctx.stroke();
+        }
+      });
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+/* ══════════════════════════════════
    TOAST
-────────────────────────────── */
-let toastTimer;
-function showToast(msg) {
+══════════════════════════════════ */
+let toastT;
+function toast(msg) {
   const el = document.getElementById("toast");
   el.textContent = msg;
   el.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove("show"), 3000);
 }
 
-/* ──────────────────────────────
-   INIT: CHECK URL PARAMS
-────────────────────────────── */
-(function init() {
-  const params = new URLSearchParams(window.location.search);
-  if (params.get("admin") !== null) {
-    showView("admin");
-  }
-})();
+/* ══════════════════════════════════
+   INIT
+══════════════════════════════════ */
+if (new URLSearchParams(location.search).get("admin") !== null) showView("admin");
 </script>
 </body>
 </html>
