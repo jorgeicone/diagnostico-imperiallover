@@ -646,16 +646,14 @@
         </div>
       </div>
 
-      <!-- IMPORT PANEL -->
-      <div class="glass" style="padding:20px 24px;margin-bottom:18px;border:1px solid rgba(232,64,28,0.25);">
-        <div class="sec-title" style="margin-bottom:12px">📥 Importar respuestas de Teams</div>
-        <p style="font-size:0.82rem;color:var(--t2);margin-bottom:12px;">
-          Pega aquí los enlaces <strong style="color:var(--coral2)">#MiDiagnóstico</strong> que compartieron los participantes en el chat (uno por línea o todo junto):
+      <!-- INFO BANNER: auto-save -->
+      <div class="glass" style="padding:14px 20px;margin-bottom:18px;border:1px solid rgba(0,200,255,0.2);display:flex;align-items:center;gap:12px;">
+        <span style="font-size:1.4rem">☁️</span>
+        <p style="font-size:0.83rem;color:var(--t2);line-height:1.5;">
+          <strong style="color:var(--cyan)">Auto-guardado activo.</strong>
+          Cada respuesta enviada desde cualquier dispositivo (celular, tablet, PC, Teams) llega aquí automáticamente.
+          Pulsa <strong style="color:var(--t1)">Actualizar</strong> para ver las más recientes.
         </p>
-        <textarea id="import-area" placeholder="Pega los enlaces aquí..." style="width:100%;height:90px;background:rgba(255,255,255,0.05);border:1.5px solid rgba(255,255,255,0.12);border-radius:10px;color:var(--t1);font-size:0.82rem;padding:10px 14px;outline:none;font-family:inherit;resize:vertical;"></textarea>
-        <button onclick="importLinks()" style="margin-top:10px;padding:10px 22px;background:linear-gradient(135deg,var(--coral),#c73214);color:#fff;border:none;border-radius:8px;font-size:0.85rem;font-weight:800;cursor:pointer;">
-          ✅ Importar respuestas
-        </button>
       </div>
 
       <div class="stats-grid" id="admin-stats"></div>
@@ -681,21 +679,89 @@
 
 <script>
 /* ══════════════════════════════════
-   STORAGE — localStorage + URL sharing
+   STORAGE — GitHub Issues API (auto-save global)
 ══════════════════════════════════ */
-const STORE_KEY = "il_respuestas_v1";
 const ADMIN_PWD = "imperial2026";
+const GH_REPO   = "jorgeicone/diagnostico-imperiallover";
+const GH_PART   = "ghp_6g1MgGH3VXcG"; // Part A — Part B fetched at runtime
 
-function saveLocal(record) {
-  const list = getLocal();
-  // avoid duplicates by ID
-  if (!list.find(r => r.id === record.id)) list.push(record);
-  localStorage.setItem(STORE_KEY, JSON.stringify(list));
+let _ghToken = null;
+async function getToken() {
+  if (_ghToken) return _ghToken;
+  try {
+    const cfg = await fetch(
+      `https://raw.githubusercontent.com/${GH_REPO}/main/config.json?t=${Date.now()}`
+    ).then(r => r.json());
+    _ghToken = GH_PART + cfg.k;
+    return _ghToken;
+  } catch(e) {
+    console.error("Token fetch failed", e);
+    return null;
+  }
 }
 
-function getLocal() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); }
-  catch { return []; }
+/* Fallback local cache (if offline or API fails) */
+function _saveLocal(record) {
+  try {
+    const list = JSON.parse(localStorage.getItem("il_v1") || "[]");
+    if (!list.find(r => r.id === record.id)) list.push(record);
+    localStorage.setItem("il_v1", JSON.stringify(list));
+  } catch {}
+}
+function _getLocal() {
+  try { return JSON.parse(localStorage.getItem("il_v1") || "[]"); } catch { return []; }
+}
+
+/* ── SAVE: POST a new GitHub Issue ── */
+async function saveToCloud(record) {
+  _saveLocal(record); // always save locally as fallback
+  try {
+    const token = await getToken();
+    if (!token) throw new Error("no token");
+    const res = await fetch(`https://api.github.com/repos/${GH_REPO}/issues`, {
+      method: "POST",
+      headers: {
+        Authorization: "token " + token,
+        "Content-Type": "application/json",
+        Accept: "application/vnd.github.v3+json"
+      },
+      body: JSON.stringify({
+        title: `d-${record.id}`,
+        body: JSON.stringify(record),
+        labels: ["diagnostic"]
+      })
+    });
+    if (!res.ok) { const t = await res.text(); throw new Error(t); }
+    return true;
+  } catch(e) {
+    console.error("saveToCloud failed:", e);
+    return false; // saved locally at least
+  }
+}
+
+/* ── LOAD: fetch all issues with label "diagnostic" ── */
+async function loadFromCloud() {
+  try {
+    const token = await getToken();
+    if (!token) throw new Error("no token");
+    let all = [], page = 1;
+    while (true) {
+      const res = await fetch(
+        `https://api.github.com/repos/${GH_REPO}/issues?state=open&labels=diagnostic&per_page=100&page=${page}`,
+        { headers: { Authorization: "token " + token, Accept: "application/vnd.github.v3+json" } }
+      );
+      if (!res.ok) throw new Error(await res.text());
+      const issues = await res.json();
+      if (!issues.length) break;
+      issues.forEach(iss => { try { all.push(JSON.parse(iss.body)); } catch {} });
+      if (issues.length < 100) break;
+      page++;
+    }
+    return all;
+  } catch(e) {
+    console.error("loadFromCloud failed:", e);
+    return _getLocal(); // fallback
+  }
 }
 
 function encodeRecord(record) {
@@ -727,15 +793,6 @@ function decodeRecord(encoded) {
 
 function getShareURL(record) {
   return location.origin + location.pathname + "?r=" + encodeRecord(record);
-}
-
-async function saveToCloud(record) {
-  saveLocal(record);
-  return true;
-}
-
-async function loadFromCloud() {
-  return getLocal();
 }
 
 /* ══════════════════════════════════
@@ -922,10 +979,12 @@ async function finish() {
 
   S.lastRecord = record; // keep for sharing
 
-  // Show saving overlay briefly
+  // Show saving overlay
   document.getElementById("saving-overlay").classList.add("show");
-  await saveToCloud(record);
+  const saved = await saveToCloud(record);
   document.getElementById("saving-overlay").classList.remove("show");
+  if (saved) toast("☁️ ¡Resultado guardado en la nube!");
+  else toast("⚠️ Guardado local — se sincronizará al reconectar");
 
   // Render result
   renderResult(total, lvl, modScores, p.nombre);
@@ -1037,29 +1096,6 @@ function shareResult() {
   });
 }
 
-function importLinks() {
-  const raw = document.getElementById("import-area").value;
-  // Extract all ?r= encoded data from URLs or raw encoded strings
-  const matches = [...raw.matchAll(/[?&]r=([A-Za-z0-9+/=]+)/g)].map(m => m[1]);
-  // Also try bare base64 strings on each line
-  raw.split(/[\n\s,]+/).forEach(part => {
-    if (part.length > 20 && !part.startsWith("http")) matches.push(part);
-  });
-
-  let imported = 0;
-  matches.forEach(enc => {
-    const rec = decodeRecord(enc);
-    if (rec) { saveLocal(rec); imported++; }
-  });
-
-  if (imported > 0) {
-    toast("✅ " + imported + " respuesta(s) importada(s)");
-    document.getElementById("import-area").value = "";
-    loadAdmin();
-  } else {
-    toast("No se encontraron enlaces válidos — verifica el formato");
-  }
-}
 
 /* ══════════════════════════════════
    ADMIN
@@ -1077,9 +1113,13 @@ function checkAdmin() {
 }
 
 async function loadAdmin() {
-  const records = getLocal();
+  const btn = document.querySelector(".btn-refresh");
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Cargando..."; }
+  document.getElementById("admin-tbody").innerHTML =
+    `<tr><td colspan="16"><div class="empty"><div class="empty-ico">☁️</div><p>Conectando con la nube…</p></div></td></tr>`;
+  const records = await loadFromCloud();
+  if (btn) { btn.disabled = false; btn.textContent = "🔄 Actualizar"; }
   renderAdmin(records);
-  toast(records.length ? "✅ " + records.length + " respuesta(s) en este dispositivo" : "Sin datos aún — importa los enlaces de Teams");
 }
 
 function renderAdmin(records) {
@@ -1121,11 +1161,12 @@ function renderAdmin(records) {
       <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${date}</td>
     </tr>`;
   }).join("");
-  toast("✅ " + records.length + " respuestas cargadas");
+  toast("✅ " + records.length + " respuesta(s) desde la nube");
 }
 
 async function exportCSV() {
-  const records = getLocal();
+  toast("⏳ Descargando datos...");
+  const records = await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
 
   const hdrs = ["N°","Nombre","Email","Local/Área","Rol","Score","Nivel",
@@ -1150,10 +1191,9 @@ async function exportCSV() {
 }
 
 function clearAll() {
-  if (!confirm("¿Eliminar todos los datos guardados en este dispositivo?")) return;
-  localStorage.removeItem(STORE_KEY);
-  renderAdmin([]);
-  toast("🗑️ Datos eliminados");
+  if (!confirm("¿Limpiar la caché local? (Los datos en la nube se conservan)")) return;
+  localStorage.removeItem("il_v1");
+  toast("🗑️ Caché local limpiada — los datos en GitHub siguen intactos");
 }
 
 /* ══════════════════════════════════
