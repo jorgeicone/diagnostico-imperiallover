@@ -1723,25 +1723,48 @@ function _buildRows(records) {
   return {hdrs, rows};
 }
 
-/* Excel real .xlsx con SheetJS */
+/* Excel real .xlsx con SheetJS — compatible iOS/Android/PC */
 async function exportExcel() {
   toast("⏳ Generando Excel...");
-  // Usar datos ya cargados; si no hay, traer de la nube
-  const records = (window._adminRecords && window._adminRecords.length)
-    ? window._adminRecords : await loadFromCloud();
-  if (!records.length) return toast("No hay datos para exportar aún");
-  const {hdrs, rows} = _buildRows(records);
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([hdrs, ...rows]);
-  // Calcular ancho con loop (evita crash con spread en arrays grandes)
-  ws['!cols'] = hdrs.map((h, i) => {
-    let max = h.length;
-    rows.forEach(r => { const l = String(r[i]||'').length; if(l > max) max = l; });
-    return { wch: Math.min(max + 2, 50) };
-  });
-  XLSX.utils.book_append_sheet(wb, ws, "ImperialLovers");
-  XLSX.writeFile(wb, `ImperialLovers_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast("✅ Excel descargado — " + records.length + " filas");
+  try {
+    if (typeof XLSX === 'undefined') throw new Error("Librería XLSX no cargada aún — espera 3 seg e intenta de nuevo");
+
+    const records = (window._adminRecords && window._adminRecords.length)
+      ? window._adminRecords : await loadFromCloud();
+    if (!records.length) return toast("No hay datos para exportar aún");
+
+    const {hdrs, rows} = _buildRows(records);
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([hdrs, ...rows]);
+
+    // Ancho de columnas seguro
+    ws['!cols'] = hdrs.map((h, i) => {
+      let max = h.length;
+      rows.forEach(r => { const l = String(r[i]||'').length; if(l > max) max = l; });
+      return { wch: Math.min(max + 2, 50) };
+    });
+
+    XLSX.utils.book_append_sheet(wb, ws, "ImperialLovers");
+
+    // Método de descarga compatible con iOS Safari
+    const wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    const blob = new Blob([new Uint8Array(wbout)], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ImperialLovers_${new Date().toISOString().slice(0,10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+
+    toast("✅ Excel descargado — " + records.length + " filas");
+  } catch(e) {
+    console.error("exportExcel:", e);
+    toast("⚠️ " + (e.message || "Error al generar Excel"));
+  }
 }
 
 /* Google Sheets: copia datos al portapapeles y abre sheets.new */
