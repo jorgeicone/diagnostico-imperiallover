@@ -1767,36 +1767,58 @@ async function exportExcel() {
   }
 }
 
-/* Google Sheets: descarga CSV y abre Google Sheets para importar */
-async function exportGoogleSheets() {
-  toast("⏳ Generando archivo para Google Sheets...");
-  try {
-    const records = (window._adminRecords && window._adminRecords.length)
-      ? window._adminRecords : await loadFromCloud();
-    if (!records.length) return toast("No hay datos para exportar aún");
+/* Google Sheets: descarga CSV limpio */
+function exportGoogleSheets() {
+  const records = (window._adminRecords && window._adminRecords.length)
+    ? window._adminRecords : _getLocal();
+  if (!records.length) return toast("No hay datos — pulsa Actualizar primero");
 
-    const {hdrs, rows} = _buildRows(records);
-    const escape = c => `"${String(c).replace(/"/g,'""')}"`;
-    const csv = [hdrs, ...rows].map(r => r.map(escape).join(",")).join("\n");
+  const {hdrs, rows} = _buildRows(records);
+  const escape = c => `"${String(c).replace(/"/g,'""')}"`;
+  const csv = "\uFEFF" + [hdrs, ...rows].map(r => r.map(escape).join(",")).join("\n");
 
-    // Descargar CSV
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `ImperialLovers_${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+  const blob = new Blob([csv], {type: "text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ImperialLovers_${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 
-    // Abrir Google Sheets después de 1 seg para que descargue primero
-    setTimeout(() => window.open('https://sheets.new', '_blank'), 1000);
+  // Mostrar instrucciones como overlay
+  showSheetsInstructions();
+}
 
-    toast("✅ CSV descargado — en Google Sheets: Archivo → Importar → Subir el archivo");
-  } catch(e) {
-    console.error("exportGoogleSheets:", e);
-    toast("⚠️ " + (e.message || "Error al exportar"));
-  }
+function showSheetsInstructions() {
+  const existing = document.getElementById('sheets-overlay');
+  if (existing) existing.remove();
+  const div = document.createElement('div');
+  div.id = 'sheets-overlay';
+  div.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:#0d1a2e;border:1.5px solid rgba(0,200,255,.4);border-radius:14px;
+    padding:18px 24px;z-index:900;max-width:400px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.5);`;
+  div.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <strong style="color:#00C8FF;font-size:.9rem">📊 Archivo descargado</strong>
+      <button onclick="document.getElementById('sheets-overlay').remove()"
+        style="background:none;border:none;color:rgba(255,255,255,.4);font-size:1.1rem;cursor:pointer">✕</button>
+    </div>
+    <p style="font-size:.82rem;color:rgba(255,255,255,.75);line-height:1.6;margin-bottom:12px">
+      Para importar en Google Sheets:<br>
+      1. Abre <strong style="color:#fff">sheets.new</strong> en tu navegador<br>
+      2. <strong style="color:#fff">Archivo → Importar → Subir</strong><br>
+      3. Selecciona el archivo <code style="color:#00d48a">.csv</code> descargado<br>
+      4. Separador: <strong style="color:#fff">Coma</strong> → Importar
+    </p>
+    <a href="https://sheets.new" target="_blank"
+      style="display:block;text-align:center;background:linear-gradient(135deg,#1a73e8,#0d5dbd);
+      color:#fff;padding:9px;border-radius:8px;font-size:.85rem;font-weight:800;text-decoration:none">
+      Abrir Google Sheets →
+    </a>`;
+  document.body.appendChild(div);
+  setTimeout(() => { if(div.parentNode) div.remove(); }, 30000);
 }
 
 function shareDashboard() {
