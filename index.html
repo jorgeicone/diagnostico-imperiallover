@@ -1726,22 +1726,29 @@ function _buildRows(records) {
 /* Excel real .xlsx con SheetJS */
 async function exportExcel() {
   toast("⏳ Generando Excel...");
-  const records = await loadFromCloud();
+  // Usar datos ya cargados; si no hay, traer de la nube
+  const records = (window._adminRecords && window._adminRecords.length)
+    ? window._adminRecords : await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
   const {hdrs, rows} = _buildRows(records);
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([hdrs, ...rows]);
-  // Ancho automático por columna
-  ws['!cols'] = hdrs.map((_,i) => ({wch: Math.max(hdrs[i].length, ...rows.map(r=>String(r[i]).length)) + 2}));
+  // Calcular ancho con loop (evita crash con spread en arrays grandes)
+  ws['!cols'] = hdrs.map((h, i) => {
+    let max = h.length;
+    rows.forEach(r => { const l = String(r[i]||'').length; if(l > max) max = l; });
+    return { wch: Math.min(max + 2, 50) };
+  });
   XLSX.utils.book_append_sheet(wb, ws, "ImperialLovers");
   XLSX.writeFile(wb, `ImperialLovers_${new Date().toISOString().slice(0,10)}.xlsx`);
-  toast("✅ Excel .xlsx descargado — " + records.length + " filas");
+  toast("✅ Excel descargado — " + records.length + " filas");
 }
 
 /* Google Sheets: copia datos al portapapeles y abre sheets.new */
 async function exportGoogleSheets() {
   toast("⏳ Preparando datos...");
-  const records = await loadFromCloud();
+  const records = (window._adminRecords && window._adminRecords.length)
+    ? window._adminRecords : await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
   const {hdrs, rows} = _buildRows(records);
   // TSV para pegar directo en Google Sheets
