@@ -6,6 +6,7 @@
   <title>Diagnóstico ImperialLover | Plaza Imperial × Poli</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
       --bg: #08101f;
@@ -745,6 +746,39 @@
   </div>
 </div>
 
+<!-- ═══ VIEW: DASHBOARD PÚBLICO ═══ -->
+<div id="view-dashboard" class="view">
+  <div class="admin-outer">
+    <div style="text-align:center;padding:24px 0 20px">
+      <div style="font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,var(--coral),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dashboard CX 2026</div>
+      <p style="color:var(--t2);font-size:.82rem;margin-top:4px">Plaza Imperial × Politécnico Grancolombiano — Solo lectura</p>
+    </div>
+    <div class="stats-grid" id="dash-stats" style="margin-bottom:22px"></div>
+    <div class="an-tabs" id="dash-tabs">
+      <button class="an-tab active" onclick="switchDashTab('dist')">📊 Distribución</button>
+      <button class="an-tab" onclick="switchDashTab('mods')">📦 Por Módulo</button>
+      <button class="an-tab" onclick="switchDashTab('qs')">❓ Por Pregunta</button>
+    </div>
+    <div class="an-panel active" id="dan-dist">
+      <div class="charts-2col">
+        <div class="glass chart-box"><div class="chart-title">Distribución de puntajes</div><canvas id="dch-dist" height="200"></canvas></div>
+        <div class="glass chart-box"><div class="chart-title">Niveles del grupo</div><canvas id="dch-levels" height="200"></canvas></div>
+      </div>
+      <div class="charts-2col">
+        <div class="glass chart-box"><div class="chart-title">Por tipo de local / área</div><canvas id="dch-local" height="200"></canvas></div>
+        <div class="glass chart-box"><div class="chart-title">Por rol</div><canvas id="dch-rol" height="200"></canvas></div>
+      </div>
+    </div>
+    <div class="an-panel" id="dan-mods">
+      <div class="glass chart-box" style="margin-bottom:16px"><div class="chart-title">Promedio por módulo (%)</div><canvas id="dch-mods-avg" height="140"></canvas></div>
+      <div class="mods-grid" id="dash-mods-grid"></div>
+    </div>
+    <div class="an-panel" id="dan-qs">
+      <div class="qs-grid" id="dash-qs-grid"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ VIEW: ADMIN ═══ -->
 <div id="view-admin" class="view">
   <div id="admin-login-wrap">
@@ -769,6 +803,7 @@
           <button class="btn-refresh" onclick="loadAdmin()">🔄 Actualizar</button>
           <button class="btn-export" onclick="exportExcel()">📥 Exportar Excel</button>
           <button class="btn-export-sheets" onclick="exportGoogleSheets()">📊 Google Sheets</button>
+          <button class="btn-export-sheets" onclick="shareDashboard()" style="background:linear-gradient(135deg,#7b2fff,#5a1fd1);box-shadow:0 4px 14px rgba(123,47,255,.3)">📤 Compartir Dashboard</button>
           <button class="btn-del" onclick="clearAll()">🗑️ Limpiar</button>
         </div>
       </div>
@@ -832,7 +867,19 @@
         </div>
       </div>
 
-      <div class="acc-wrap" id="admin-list"></div>
+      <!-- Acordeón maestro de participantes -->
+      <div class="glass" style="border-radius:14px;overflow:hidden;margin-bottom:24px;" id="participants-section" style="display:none">
+        <div class="acc-head" onclick="toggleParticipants()" style="border-radius:14px;">
+          <span class="acc-rank" style="font-size:1.1rem">👥</span>
+          <span class="acc-name" id="participants-title">Participantes</span>
+          <div class="acc-meta"></div>
+          <span></span>
+          <span class="acc-arrow" id="participants-arrow">▼</span>
+        </div>
+        <div class="acc-body" id="participants-body">
+          <div class="acc-wrap" id="admin-list" style="padding-top:4px"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1341,26 +1388,31 @@ function renderAnalytics(records) {
 
   const DL_OFF = { datalabels:{ display:false } }; // shorthand to disable plugin per chart
 
-  /* 1 ─ Score distribution histogram con % labels */
+  /* 1 ─ Score distribution histogram con % del total */
   const bins = ['0–20','21–40','41–60','61–80','81–100'];
   const binCounts = [0,0,0,0,0];
   records.forEach(r => { binCounts[Math.min(4, Math.floor(r.score/20))]++; });
+  const binPcts = binCounts.map(v => records.length ? Math.round(v/records.length*100) : 0);
   _ci.dist = new Chart(document.getElementById('ch-dist'), {
     type:'bar',
     data:{
       labels:bins,
       datasets:[{
-        label:'Participantes', data:binCounts, borderRadius:6, borderSkipped:false,
+        label:'%', data:binPcts, borderRadius:6, borderSkipped:false,
         backgroundColor:['rgba(255,140,0,.7)','rgba(255,200,60,.7)','rgba(100,190,255,.7)','rgba(0,200,120,.75)','rgba(0,212,138,.9)']
       }]
     },
     options:{
       plugins:{
         legend:{display:false},
-        datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'top',
-          formatter:v=>v>0?v+' pers.':''}
+        datalabels:{color:'#fff',font:{weight:'bold',size:12},anchor:'end',align:'top',
+          formatter:v=>v>0?v+'%':''}
       },
-      scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y, ticks:{...CHART_SCALE.y.ticks,stepSize:1}}}
+      scales:{
+        x:CHART_SCALE.x,
+        y:{...CHART_SCALE.y,min:0,max:100,
+          ticks:{...CHART_SCALE.y.ticks,callback:v=>v+'%'}}
+      }
     }
   });
 
@@ -1387,22 +1439,23 @@ function renderAnalytics(records) {
   records.forEach(r => { const k = (r.tienda||'Sin especificar').trim()||'Sin especificar'; localMap[k]=(localMap[k]||0)+1; });
   const localLabels = Object.keys(localMap).sort((a,b)=>localMap[b]-localMap[a]).slice(0,12);
   const localData = localLabels.map(l=>localMap[l]);
+  const localPcts = localData.map(v=>records.length?Math.round(v/records.length*100):0);
   _ci.local = new Chart(document.getElementById('ch-local'), {
     type:'bar',
     data:{
       labels:localLabels,
-      datasets:[{label:'Personas',data:localData,borderRadius:5,borderSkipped:false,
+      datasets:[{label:'%',data:localPcts,borderRadius:5,borderSkipped:false,
         backgroundColor:'rgba(0,200,255,.65)'}]
     },
     options:{
       indexAxis:'y',
       plugins:{
         legend:{display:false},
-        datalabels:{color:'#fff',font:{weight:'bold',size:10},anchor:'end',align:'right',
-          formatter:v=>v}
+        datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'right',
+          formatter:v=>v+'%'}
       },
       scales:{
-        x:{...CHART_SCALE.x,ticks:{...CHART_SCALE.x.ticks,stepSize:1}},
+        x:{...CHART_SCALE.x,min:0,max:100,ticks:{...CHART_SCALE.x.ticks,callback:v=>v+'%'}},
         y:{...CHART_SCALE.y,ticks:{color:'rgba(255,255,255,.7)',font:{size:9}}}
       }
     }
@@ -1500,7 +1553,7 @@ function renderAnalytics(records) {
     const pA = qc.t ? Math.round(qc.A/qc.t*100) : 0;
     const pB = qc.t ? Math.round(qc.B/qc.t*100) : 0;
     const pC = qc.t ? Math.round(qc.C/qc.t*100) : 0;
-    const txt = QS[qi] ? QS[qi].q.slice(0,60)+(QS[qi].q.length>60?'…':'') : '';
+    const txt = QS[qi] ? QS[qi].t.slice(0,65)+(QS[qi].t.length>65?'…':'') : '';
     return `<div class="glass q-chart-box">
       <div class="q-chart-title"><span style="color:var(--coral);font-weight:900">P${qi+1}</span> ${txt}</div>
       <div class="ans-bar-row"><span class="ans-lbl ans-lbl-a">A</span><div class="ans-track"><div class="ans-fill ans-fill-a" style="width:${pA}%"></div></div><span class="ans-pct">${pA}%</span></div>
@@ -1538,6 +1591,12 @@ function renderAdmin(records) {
   // Store records globally for modal access
   window._adminRecords = records;
 
+  // Mostrar / actualizar acordeón maestro
+  const pSection = document.getElementById('participants-section');
+  pSection.style.display = records.length ? 'block' : 'none';
+  document.getElementById('participants-title').textContent =
+    `Ver participantes (${records.length})`;
+
   document.getElementById("admin-list").innerHTML = records.map((r, i) => {
     const lm = lvlMeta[r.nivelKey] || lvlMeta.p;
     const date = new Date(r.timestamp).toLocaleDateString("es-CO", {day:"2-digit",month:"short"});
@@ -1573,6 +1632,13 @@ function renderAdmin(records) {
 
   toast("✅ " + records.length + " respuesta(s) desde la nube");
   renderAnalytics(records);
+}
+
+function toggleParticipants() {
+  const body = document.getElementById('participants-body');
+  const arr  = document.getElementById('participants-arrow');
+  const open = body.classList.toggle('open');
+  arr.classList.toggle('open', open);
 }
 
 function toggleAcc(i) {
@@ -1657,36 +1723,131 @@ function _buildRows(records) {
   return {hdrs, rows};
 }
 
-/* Excel: usa sep=; para que Excel en español abra limpio */
+/* Excel real .xlsx con SheetJS */
 async function exportExcel() {
-  toast("⏳ Descargando datos...");
+  toast("⏳ Generando Excel...");
   const records = await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
   const {hdrs, rows} = _buildRows(records);
-  const escape = c => `"${String(c).replace(/"/g,'""')}"`;
-  const csv = `sep=;\n` + [hdrs,...rows].map(r=>r.map(escape).join(";")).join("\n");
-  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href=url; a.download=`ImperialLovers_Excel_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  toast("✅ Excel listo — " + records.length + " filas");
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([hdrs, ...rows]);
+  // Ancho automático por columna
+  ws['!cols'] = hdrs.map((_,i) => ({wch: Math.max(hdrs[i].length, ...rows.map(r=>String(r[i]).length)) + 2}));
+  XLSX.utils.book_append_sheet(wb, ws, "ImperialLovers");
+  XLSX.writeFile(wb, `ImperialLovers_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast("✅ Excel .xlsx descargado — " + records.length + " filas");
 }
 
-/* Google Sheets: CSV con coma, sin sep=, sin BOM */
+/* Google Sheets: copia datos al portapapeles y abre sheets.new */
 async function exportGoogleSheets() {
-  toast("⏳ Preparando para Google Sheets...");
+  toast("⏳ Preparando datos...");
   const records = await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
   const {hdrs, rows} = _buildRows(records);
-  const escape = c => `"${String(c).replace(/"/g,'""')}"`;
-  const csv = [hdrs,...rows].map(r=>r.map(escape).join(",")).join("\n");
-  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href=url; a.download=`ImperialLovers_GSheets_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click(); URL.revokeObjectURL(url);
-  toast("✅ Archivo listo — en Google Sheets: Archivo → Importar → Subir");
+  // TSV para pegar directo en Google Sheets
+  const tsv = [hdrs,...rows].map(r=>r.map(c=>String(c).replace(/\t/g,' ')).join('\t')).join('\n');
+  try {
+    await navigator.clipboard.writeText(tsv);
+    window.open('https://sheets.new','_blank');
+    toast("✅ Datos copiados — en Google Sheets pulsa Ctrl+V o ⌘+V");
+  } catch {
+    // Fallback descarga
+    const escape = c=>`"${String(c).replace(/"/g,'""')}"`;
+    const csv=[hdrs,...rows].map(r=>r.map(escape).join(",")).join("\n");
+    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+    const url=URL.createObjectURL(blob);const a=document.createElement("a");
+    a.href=url;a.download=`ImperialLovers_GSheets_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();URL.revokeObjectURL(url);
+    toast("✅ Descargado — importa en Google Sheets: Archivo → Importar → Subir");
+  }
+}
+
+function shareDashboard() {
+  const url = location.origin + location.pathname + '?dashboard';
+  navigator.clipboard.writeText(url).then(() => {
+    toast("✅ Enlace del dashboard copiado — compártelo sin contraseña");
+  }).catch(() => {
+    window.prompt("Copia este enlace del dashboard:", url);
+  });
+}
+
+function switchDashTab(tab) {
+  const tabs = ['dist','mods','qs'];
+  document.querySelectorAll('#dash-tabs .an-tab').forEach((btn,i) => btn.classList.toggle('active', tabs[i]===tab));
+  ['dan-dist','dan-mods','dan-qs'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById('dan-' + tab).classList.add('active');
+}
+
+let _dci = {};
+async function loadDashboard() {
+  // Show cached stats instantly
+  const cached = _getLocal();
+  if (cached.length) renderDashboard(cached);
+
+  toast("☁️ Cargando datos del grupo...");
+  const records = await loadFromCloud();
+  renderDashboard(records);
+  toast("✅ Dashboard actualizado — " + records.length + " participantes");
+}
+
+function renderDashboard(records) {
+  // Stats
+  const avg = records.length ? Math.round(records.reduce((s,r)=>s+r.score,0)/records.length) : 0;
+  const lc = {p:0,f:0,e:0};
+  records.forEach(r => { if(lc[r.nivelKey]!==undefined) lc[r.nivelKey]++; });
+  const pct = k => records.length ? Math.round(lc[k]/records.length*100) : 0;
+  document.getElementById('dash-stats').innerHTML = `
+    <div class="glass stat"><div class="stat-lbl">Total</div><div class="stat-val">${records.length}</div><div class="stat-sub">participantes</div></div>
+    <div class="glass stat"><div class="stat-lbl">Promedio</div><div class="stat-val" style="background:linear-gradient(135deg,#E8401C,#D4A847);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${avg}</div><div class="stat-sub">puntos del grupo</div></div>
+    <div class="glass stat"><div class="stat-lbl">🌱 Principiante</div><div class="stat-val" style="color:#ffb347">${lc.p}</div><div class="stat-sub">${pct('p')}%</div></div>
+    <div class="glass stat"><div class="stat-lbl">⭐ En Formación</div><div class="stat-val" style="color:#66ccff">${lc.f}</div><div class="stat-sub">${pct('f')}%</div></div>
+    <div class="glass stat"><div class="stat-lbl">🏆 Experto</div><div class="stat-val" style="color:#00d48a">${lc.e}</div><div class="stat-sub">${pct('e')}%</div></div>`;
+  if (!records.length) return;
+
+  // Reuse renderAnalytics logic but with 'd' prefixed canvas IDs
+  Object.values(_dci).forEach(c=>{try{c.destroy();}catch{}});
+  _dci = {};
+
+  const binPcts = [0,0,0,0,0];
+  records.forEach(r=>{ binPcts[Math.min(4,Math.floor(r.score/20))]++; });
+  const bpPct = binPcts.map(v=>records.length?Math.round(v/records.length*100):0);
+
+  _dci.dist = new Chart(document.getElementById('dch-dist'),{type:'bar',data:{labels:['0–20','21–40','41–60','61–80','81–100'],datasets:[{data:bpPct,borderRadius:6,borderSkipped:false,backgroundColor:['rgba(255,140,0,.7)','rgba(255,200,60,.7)','rgba(100,190,255,.7)','rgba(0,200,120,.75)','rgba(0,212,138,.9)']}]},options:{plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'bold',size:12},anchor:'end',align:'top',formatter:v=>v>0?v+'%':''}},scales:{x:CHART_SCALE.x,y:{...CHART_SCALE.y,min:0,max:100,ticks:{...CHART_SCALE.y.ticks,callback:v=>v+'%'}}}}});
+
+  _dci.levels = new Chart(document.getElementById('dch-levels'),{type:'doughnut',data:{labels:['🌱 Principiante','⭐ En Formación','🏆 Experto'],datasets:[{data:[lc.p,lc.f,lc.e],backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'],borderWidth:0,hoverOffset:8}]},options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:10},boxWidth:10,padding:10}},datalabels:{color:'#fff',font:{weight:'bold',size:12},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return t?Math.round(v/t*100)+'%':'';}}}}});
+
+  // Local + Rol charts
+  const lm={}, rm={};
+  records.forEach(r=>{const k=(r.tienda||'S/E').trim()||'S/E'; lm[k]=(lm[k]||0)+1;});
+  records.forEach(r=>{const k=(r.rol||'S/E').trim()||'S/E'; rm[k]=(rm[k]||0)+1;});
+  const ll=Object.keys(lm).sort((a,b)=>lm[b]-lm[a]).slice(0,10);
+  const rl=Object.keys(rm).sort((a,b)=>rm[b]-rm[a]);
+  _dci.local = new Chart(document.getElementById('dch-local'),{type:'bar',data:{labels:ll,datasets:[{data:ll.map(k=>records.length?Math.round(lm[k]/records.length*100):0),borderRadius:5,borderSkipped:false,backgroundColor:'rgba(0,200,255,.65)'}]},options:{indexAxis:'y',plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'right',formatter:v=>v+'%'}},scales:{x:{...CHART_SCALE.x,min:0,max:100,ticks:{...CHART_SCALE.x.ticks,callback:v=>v+'%'}},y:{...CHART_SCALE.y,ticks:{color:'rgba(255,255,255,.7)',font:{size:9}}}}}});
+  _dci.rol = new Chart(document.getElementById('dch-rol'),{type:'doughnut',data:{labels:rl,datasets:[{data:rl.map(k=>rm[k]),backgroundColor:['rgba(232,64,28,.8)','rgba(212,168,71,.8)','rgba(0,200,255,.8)','rgba(0,212,138,.8)','rgba(123,47,255,.8)','rgba(255,140,0,.8)'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:9},boxWidth:10,padding:8}},datalabels:{color:'#fff',font:{weight:'bold',size:11},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return t?Math.round(v/t*100)+'%':''}}}}});
+
+  // Module avg
+  const ms=Array(8).fill(0), mx=Array(8).fill(0);
+  records.forEach(r=>{if(r.modulos)r.modulos.forEach((m,i)=>{ms[i]+=m.score;mx[i]=m.max;});});
+  const mp=ms.map((s,i)=>mx[i]>0?Math.round(s/records.length/mx[i]*100):0);
+  _dci.modsAvg=new Chart(document.getElementById('dch-mods-avg'),{type:'bar',data:{labels:['M1','M2','M3','M4','M5','M6','M7','M8'],datasets:[{data:mp,borderRadius:6,borderSkipped:false,backgroundColor:mp.map(v=>v>=67?'rgba(0,212,138,.75)':v>=34?'rgba(100,190,255,.75)':'rgba(255,140,0,.75)')}]},options:{plugins:{legend:{display:false},datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'top',formatter:v=>v+'%'}},scales:{x:CHART_SCALE.x,y:{...CHART_SCALE.y,min:0,max:100,ticks:{...CHART_SCALE.y.ticks,callback:v=>v+'%'}}}}});
+
+  // Module donuts
+  const modNms=['M1 — CX Fundamentos','M2 — Customer Journey','M3 — Peak-End Rule','M4 — Innovación','M5 — Fidelización','M6 — Liderazgo','M7 — CX Digital','M8 — Métricas'];
+  document.getElementById('dash-mods-grid').innerHTML=modNms.map((nm,mi)=>`<div class="glass mod-chart-box"><div class="mod-chart-name">${nm}</div><div style="position:relative;height:170px"><canvas id="dch-mod-${mi}"></canvas></div></div>`).join('');
+  modNms.forEach((_,mi)=>{
+    const mc={p:0,f:0,e:0};
+    records.forEach(r=>{if(!r.modulos||!r.modulos[mi])return;const p=r.modulos[mi].max>0?r.modulos[mi].score/r.modulos[mi].max*100:0;if(p<34)mc.p++;else if(p<67)mc.f++;else mc.e++;});
+    _dci[`mod${mi}`]=new Chart(document.getElementById(`dch-mod-${mi}`),{type:'doughnut',data:{labels:['Principiante','En Formación','Experto'],datasets:[{data:[mc.p,mc.f,mc.e],backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'],borderWidth:0}]},options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.6)',font:{size:9},boxWidth:8,padding:6}},datalabels:{color:'#fff',font:{weight:'bold',size:12},formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return t&&v>0?Math.round(v/t*100)+'%':''}}}}});
+  });
+
+  // Question bars
+  const qc=Array.from({length:25},()=>({A:0,B:0,C:0,t:0}));
+  records.forEach(r=>{if(!r.respuestas)return;r.respuestas.forEach((ans,qi)=>{if(qi<25){qc[qi][ans]=(qc[qi][ans]||0)+1;qc[qi].t++;}});});
+  document.getElementById('dash-qs-grid').innerHTML=qc.map((q,qi)=>{
+    const pA=q.t?Math.round(q.A/q.t*100):0,pB=q.t?Math.round(q.B/q.t*100):0,pC=q.t?Math.round(q.C/q.t*100):0;
+    const txt=QS[qi]?QS[qi].t.slice(0,65)+(QS[qi].t.length>65?'…':''):'';
+    return `<div class="glass q-chart-box"><div class="q-chart-title"><span style="color:var(--coral);font-weight:900">P${qi+1}</span> ${txt}</div><div class="ans-bar-row"><span class="ans-lbl ans-lbl-a">A</span><div class="ans-track"><div class="ans-fill ans-fill-a" style="width:${pA}%"></div></div><span class="ans-pct">${pA}%</span></div><div class="ans-bar-row"><span class="ans-lbl ans-lbl-b">B</span><div class="ans-track"><div class="ans-fill ans-fill-b" style="width:${pB}%"></div></div><span class="ans-pct">${pB}%</span></div><div class="ans-bar-row"><span class="ans-lbl ans-lbl-c">C</span><div class="ans-track"><div class="ans-fill ans-fill-c" style="width:${pC}%"></div></div><span class="ans-pct">${pC}%</span></div><div style="font-size:.65rem;color:var(--t3);margin-top:4px">${q.t} resp.</div></div>`;
+  }).join('');
 }
 
 function clearAll() {
@@ -1791,7 +1952,11 @@ function toast(msg) {
 // Handle URL params
 (function() {
   const params = new URLSearchParams(location.search);
-  if (params.get("admin") !== null) {
+  if (params.get("dashboard") !== null) {
+    showView("dashboard");
+    getToken();
+    loadDashboard();
+  } else if (params.get("admin") !== null) {
     showView("admin");
     getToken(); // pre-calentar token mientras el usuario escribe la contraseña
   } else if (params.get("r")) {
