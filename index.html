@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diagnóstico ImperialLover | Plaza Imperial × Poli</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
   <style>
     :root {
       --bg: #08101f;
@@ -501,7 +502,76 @@
       box-shadow:0 4px 14px rgba(26,115,232,.3);
     }
     .btn-export-sheets:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(26,115,232,.45);}
-    @media(max-width:600px){.charts-2col{grid-template-columns:1fr;}}
+
+    /* ── ACCORDION ── */
+    .acc-wrap{display:flex;flex-direction:column;gap:10px;margin-bottom:24px;}
+    .acc-item{border-radius:14px;overflow:hidden;transition:.2s;}
+    .acc-head{
+      display:grid;grid-template-columns:36px 1fr auto auto 24px;
+      align-items:center;gap:12px;
+      padding:14px 18px;cursor:pointer;
+      transition:.15s;
+    }
+    .acc-head:hover{background:rgba(255,255,255,.04);}
+    .acc-rank{font-size:.75rem;font-weight:900;color:var(--t3);text-align:center;}
+    .acc-name{font-size:.95rem;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .acc-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end;}
+    .acc-date{font-size:.68rem;color:var(--t3);white-space:nowrap;}
+    .acc-arrow{font-size:.75rem;color:var(--t3);transition:transform .25s;user-select:none;}
+    .acc-arrow.open{transform:rotate(180deg);}
+    .acc-body{
+      padding:0 18px;max-height:0;overflow:hidden;
+      transition:max-height .35s ease,padding .25s ease;
+    }
+    .acc-body.open{max-height:700px;padding:0 18px 16px;}
+    .acc-detail-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:14px;}
+    .acc-field{background:rgba(255,255,255,.04);border-radius:8px;padding:8px 10px;}
+    .acc-field-lbl{font-size:.62rem;color:var(--t3);text-transform:uppercase;font-weight:800;letter-spacing:.4px;margin-bottom:3px;}
+    .acc-field-val{font-size:.82rem;font-weight:700;}
+    .acc-mods{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+    .acc-mod-chip{
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+      border-radius:6px;padding:4px 10px;font-size:.72rem;
+      display:flex;gap:5px;align-items:center;
+    }
+    .acc-mod-chip strong{color:var(--gold);}
+    .btn-detail{
+      padding:8px 18px;background:linear-gradient(135deg,var(--coral),#c73214);
+      color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:800;
+      cursor:pointer;font-family:inherit;transition:.15s;
+    }
+    .btn-detail:hover{transform:translateY(-1px);}
+
+    /* ── MODAL detalle persona ── */
+    #detail-modal{
+      display:none;position:fixed;inset:0;z-index:600;
+      background:rgba(8,16,31,.96);backdrop-filter:blur(12px);
+      overflow-y:auto;
+    }
+    .modal-inner{max-width:520px;margin:32px auto;padding:20px 20px 60px;}
+    .modal-close{
+      display:flex;align-items:center;gap:6px;
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+      border-radius:8px;padding:8px 16px;color:var(--t2);
+      font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;
+      margin-bottom:20px;transition:.15s;
+    }
+    .modal-close:hover{background:rgba(255,255,255,.1);}
+    .modal-hero{text-align:center;margin-bottom:20px;}
+    .modal-name{font-size:1.3rem;font-weight:900;margin-bottom:4px;}
+    .modal-sub{font-size:.8rem;color:var(--t2);}
+    .modal-mods-bars{margin-bottom:20px;}
+    .modal-bar-row{display:grid;grid-template-columns:110px 1fr 50px;align-items:center;gap:8px;margin-bottom:9px;}
+    .modal-bar-lbl{font-size:.72rem;color:var(--t2);font-weight:600;text-align:right;}
+    .modal-bar-track{background:rgba(255,255,255,.07);border-radius:50px;height:10px;overflow:hidden;}
+    .modal-bar-fill{height:100%;border-radius:50px;background:linear-gradient(90deg,var(--coral),var(--gold));transition:width .6s ease;}
+    .modal-bar-val{font-size:.72rem;font-weight:800;color:var(--gold);}
+
+    /* Módulos grid más grandes */
+    .mods-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;}
+    .mod-chart-box{padding:18px 20px;}
+
+    @media(max-width:600px){.charts-2col{grid-template-columns:1fr;}.acc-head{grid-template-columns:28px 1fr auto 20px;}}
     @media(max-width:480px){
       .intro-title{font-size:1.8rem;}
       .q-card{padding:22px 18px 18px;}
@@ -514,6 +584,25 @@
 
 <!-- PARTICLES -->
 <canvas id="cv"></canvas>
+
+<!-- MODAL: detalle por persona -->
+<div id="detail-modal">
+  <div class="modal-inner">
+    <button class="modal-close" onclick="closeModal()">← Volver al panel</button>
+    <div class="modal-hero">
+      <div class="modal-name" id="modal-name"></div>
+      <div class="modal-sub" id="modal-sub"></div>
+    </div>
+    <div class="glass chart-box" style="margin-bottom:18px">
+      <div class="chart-title">Perfil por módulo</div>
+      <canvas id="modal-radar" height="260"></canvas>
+    </div>
+    <div class="glass chart-box">
+      <div class="chart-title">Detalle por módulo</div>
+      <div class="modal-mods-bars" id="modal-bars"></div>
+    </div>
+  </div>
+</div>
 
 <!-- SAVING OVERLAY -->
 <div class="saving-overlay" id="saving-overlay">
@@ -716,6 +805,16 @@
               <canvas id="ch-levels" height="200"></canvas>
             </div>
           </div>
+          <div class="charts-2col">
+            <div class="glass chart-box">
+              <div class="chart-title">Por tipo de local / área</div>
+              <canvas id="ch-local" height="200"></canvas>
+            </div>
+            <div class="glass chart-box">
+              <div class="chart-title">Por rol</div>
+              <canvas id="ch-rol" height="200"></canvas>
+            </div>
+          </div>
         </div>
 
         <!-- TAB: Por Módulo -->
@@ -733,20 +832,7 @@
         </div>
       </div>
 
-      <div class="tbl-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>#</th><th>Nombre</th><th>Email</th><th>Local</th><th>Rol</th>
-              <th>Score</th><th>Nivel</th>
-              <th>M1</th><th>M2</th><th>M3</th><th>M4</th>
-              <th>M5</th><th>M6</th><th>M7</th><th>M8</th>
-              <th>Fecha</th>
-            </tr>
-          </thead>
-          <tbody id="admin-tbody"></tbody>
-        </table>
-      </div>
+      <div class="acc-wrap" id="admin-list"></div>
     </div>
   </div>
 </div>
@@ -1208,6 +1294,9 @@ function destroyCharts() {
   _ci = {};
 }
 
+// Register datalabels plugin globally
+if (typeof ChartDataLabels !== 'undefined') Chart.register(ChartDataLabels);
+
 const CHART_SCALE = {
   x: { ticks:{color:'rgba(255,255,255,.55)',font:{size:10}}, grid:{color:'rgba(255,255,255,.07)'} },
   y: { ticks:{color:'rgba(255,255,255,.55)',font:{size:10}}, grid:{color:'rgba(255,255,255,.07)'} }
@@ -1226,7 +1315,9 @@ function renderAnalytics(records) {
   if (!records.length) { wrap.style.display = 'none'; return; }
   wrap.style.display = 'block';
 
-  /* 1 ─ Score distribution histogram */
+  const DL_OFF = { datalabels:{ display:false } }; // shorthand to disable plugin per chart
+
+  /* 1 ─ Score distribution histogram con % labels */
   const bins = ['0–20','21–40','41–60','61–80','81–100'];
   const binCounts = [0,0,0,0,0];
   records.forEach(r => { binCounts[Math.min(4, Math.floor(r.score/20))]++; });
@@ -1240,12 +1331,16 @@ function renderAnalytics(records) {
       }]
     },
     options:{
-      plugins:{legend:{display:false}},
-      scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y, ticks:{...CHART_SCALE.y.ticks, stepSize:1}}}
+      plugins:{
+        legend:{display:false},
+        datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'top',
+          formatter:v=>v>0?v+' pers.':''}
+      },
+      scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y, ticks:{...CHART_SCALE.y.ticks,stepSize:1}}}
     }
   });
 
-  /* 2 ─ Levels donut */
+  /* 2 ─ Levels donut con % */
   const lc = {p:0,f:0,e:0};
   records.forEach(r => { if(lc[r.nivelKey]!==undefined) lc[r.nivelKey]++; });
   _ci.levels = new Chart(document.getElementById('ch-levels'), {
@@ -1254,10 +1349,62 @@ function renderAnalytics(records) {
       labels:['🌱 Principiante','⭐ En Formación','🏆 Experto'],
       datasets:[{data:[lc.p,lc.f,lc.e], backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'], borderWidth:0, hoverOffset:8}]
     },
-    options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:10},boxWidth:10,padding:10}}}}
+    options:{
+      plugins:{
+        legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:10},boxWidth:10,padding:10}},
+        datalabels:{color:'#fff',font:{weight:'bold',size:12},
+          formatter:(v,ctx)=>{ const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return t?Math.round(v/t*100)+'%':''; }}
+      }
+    }
   });
 
-  /* 3 ─ Module avg bar */
+  /* 3 ─ Local / área distribution */
+  const localMap = {};
+  records.forEach(r => { const k = (r.tienda||'Sin especificar').trim()||'Sin especificar'; localMap[k]=(localMap[k]||0)+1; });
+  const localLabels = Object.keys(localMap).sort((a,b)=>localMap[b]-localMap[a]).slice(0,12);
+  const localData = localLabels.map(l=>localMap[l]);
+  _ci.local = new Chart(document.getElementById('ch-local'), {
+    type:'bar',
+    data:{
+      labels:localLabels,
+      datasets:[{label:'Personas',data:localData,borderRadius:5,borderSkipped:false,
+        backgroundColor:'rgba(0,200,255,.65)'}]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{
+        legend:{display:false},
+        datalabels:{color:'#fff',font:{weight:'bold',size:10},anchor:'end',align:'right',
+          formatter:v=>v}
+      },
+      scales:{
+        x:{...CHART_SCALE.x,ticks:{...CHART_SCALE.x.ticks,stepSize:1}},
+        y:{...CHART_SCALE.y,ticks:{color:'rgba(255,255,255,.7)',font:{size:9}}}
+      }
+    }
+  });
+
+  /* 4 ─ Rol distribution */
+  const rolMap = {};
+  records.forEach(r => { const k = (r.rol||'Sin especificar').trim()||'Sin especificar'; rolMap[k]=(rolMap[k]||0)+1; });
+  const rolLabels = Object.keys(rolMap).sort((a,b)=>rolMap[b]-rolMap[a]);
+  const rolColors = ['rgba(232,64,28,.8)','rgba(212,168,71,.8)','rgba(0,200,255,.8)','rgba(0,212,138,.8)','rgba(123,47,255,.8)','rgba(255,140,0,.8)'];
+  _ci.rol = new Chart(document.getElementById('ch-rol'), {
+    type:'doughnut',
+    data:{
+      labels:rolLabels,
+      datasets:[{data:rolLabels.map(k=>rolMap[k]),backgroundColor:rolColors,borderWidth:0,hoverOffset:6}]
+    },
+    options:{
+      plugins:{
+        legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:9},boxWidth:10,padding:8}},
+        datalabels:{color:'#fff',font:{weight:'bold',size:11},
+          formatter:(v,ctx)=>{ const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return t?Math.round(v/t*100)+'%':''; }}
+      }
+    }
+  });
+
+  /* 5 ─ Module avg bar con % labels */
   const modSums = Array(8).fill(0);
   const modMaxes = Array(8).fill(0);
   records.forEach(r => {
@@ -1276,18 +1423,23 @@ function renderAnalytics(records) {
       }]
     },
     options:{
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y}%`}}},
+      plugins:{
+        legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y}%`}},
+        datalabels:{color:'#fff',font:{weight:'bold',size:11},anchor:'end',align:'top',
+          formatter:v=>v+'%'}
+      },
       scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y,min:0,max:100,ticks:{...CHART_SCALE.y.ticks,callback:v=>v+'%'}}}
     }
   });
 
-  /* 4 ─ Per-module donuts */
+  /* 6 ─ Per-module donuts más grandes con % */
   const modNames = ['M1 — CX Fundamentos','M2 — Customer Journey','M3 — Peak-End Rule','M4 — Innovación','M5 — Fidelización','M6 — Liderazgo','M7 — CX Digital','M8 — Métricas'];
   const modsGrid = document.getElementById('mods-grid');
   modsGrid.innerHTML = modNames.map((nm,mi) => `
     <div class="glass mod-chart-box">
       <div class="mod-chart-name">${nm}</div>
-      <div style="position:relative;height:120px"><canvas id="ch-mod-${mi}"></canvas></div>
+      <div style="position:relative;height:170px"><canvas id="ch-mod-${mi}"></canvas></div>
     </div>`).join('');
 
   modNames.forEach((_,mi) => {
@@ -1303,7 +1455,13 @@ function renderAnalytics(records) {
         labels:['Principiante','En Formación','Experto'],
         datasets:[{data:[mc.p,mc.f,mc.e], backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'], borderWidth:0}]
       },
-      options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.55)',font:{size:9},boxWidth:8,padding:6}}}}
+      options:{
+        plugins:{
+          legend:{position:'bottom',labels:{color:'rgba(255,255,255,.6)',font:{size:9},boxWidth:8,padding:6}},
+          datalabels:{color:'#fff',font:{weight:'bold',size:12},
+            formatter:(v,ctx)=>{ const t=ctx.dataset.data.reduce((a,b)=>a+b,0); return t&&v>0?Math.round(v/t*100)+'%':''; }}
+        }
+      }
     });
   });
 
@@ -1351,25 +1509,114 @@ function renderAdmin(records) {
   `;
 
   const lvlMeta = {p:{cls:"pill-p",lbl:"Principiante"},f:{cls:"pill-f",lbl:"En Formación"},e:{cls:"pill-e",lbl:"Experto"}};
-  const tbody = document.getElementById("admin-tbody");
-  tbody.innerHTML = records.map((r, i) => {
+  const modShort = ['CX Fund.','Journey','Peak-End','Innovación','Fideliz.','Liderazgo','CX Digital','Métricas'];
+
+  // Store records globally for modal access
+  window._adminRecords = records;
+
+  document.getElementById("admin-list").innerHTML = records.map((r, i) => {
     const lm = lvlMeta[r.nivelKey] || lvlMeta.p;
-    const mods = r.modulos ? r.modulos.map(m => `<td style="text-align:center;color:var(--t2)">${m.score}/${m.max}</td>`).join("") : "<td colspan='8'>—</td>";
-    const date = new Date(r.timestamp).toLocaleDateString("es-CO", {day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"});
-    return `<tr>
-      <td style="font-weight:800;color:var(--t2)">${i+1}</td>
-      <td style="font-weight:700">${r.nombre}</td>
-      <td style="color:var(--t3);font-size:0.75rem">${r.email}</td>
-      <td style="color:var(--t2)">${r.tienda||"—"}</td>
-      <td style="color:var(--t2)">${r.rol||"—"}</td>
-      <td><div class="mini-bar"><div class="mini-track"><div class="mini-fill" style="width:${r.score}%"></div></div><strong style="color:var(--gold)">${r.score}</strong></div></td>
-      <td><span class="pill ${lm.cls}">${lm.lbl}</span></td>
-      ${mods}
-      <td style="color:var(--t3);font-size:0.72rem;white-space:nowrap">${date}</td>
-    </tr>`;
+    const date = new Date(r.timestamp).toLocaleDateString("es-CO", {day:"2-digit",month:"short"});
+    const modChips = r.modulos ? r.modulos.map((m,mi) => {
+      const pct = m.max>0?Math.round(m.score/m.max*100):0;
+      const col = pct>=67?'#00d48a':pct>=34?'#66ccff':'#ffb347';
+      return `<span class="acc-mod-chip" style="border-color:${col}33"><span style="color:var(--t3);font-size:.65rem">${modShort[mi]}</span> <strong style="color:${col}">${pct}%</strong></span>`;
+    }).join('') : '<span style="color:var(--t3);font-size:.8rem">Sin módulos</span>';
+
+    return `<div class="acc-item glass" id="acc-${i}">
+      <div class="acc-head" onclick="toggleAcc(${i})">
+        <span class="acc-rank">${i+1}</span>
+        <span class="acc-name">${r.nombre}</span>
+        <div class="acc-meta">
+          <div class="mini-bar"><div class="mini-track"><div class="mini-fill" style="width:${r.score}%"></div></div><strong style="color:var(--gold);font-size:.85rem">${r.score}</strong></div>
+          <span class="pill ${lm.cls}">${lm.lbl}</span>
+        </div>
+        <span class="acc-date">${date}</span>
+        <span class="acc-arrow" id="arr-${i}">▼</span>
+      </div>
+      <div class="acc-body" id="body-${i}">
+        <div class="acc-detail-grid">
+          <div class="acc-field"><div class="acc-field-lbl">Email</div><div class="acc-field-val" style="font-size:.75rem;color:var(--t2)">${r.email}</div></div>
+          <div class="acc-field"><div class="acc-field-lbl">Local / Área</div><div class="acc-field-val">${r.tienda||'—'}</div></div>
+          <div class="acc-field"><div class="acc-field-lbl">Rol</div><div class="acc-field-val">${r.rol||'—'}</div></div>
+          <div class="acc-field"><div class="acc-field-lbl">Puntaje</div><div class="acc-field-val" style="color:var(--gold)">${r.score} / 100</div></div>
+        </div>
+        <div class="acc-mods">${modChips}</div>
+        <button class="btn-detail" onclick="showDetail(${i})">📊 Ver perfil detallado por módulo</button>
+      </div>
+    </div>`;
   }).join("");
+
   toast("✅ " + records.length + " respuesta(s) desde la nube");
   renderAnalytics(records);
+}
+
+function toggleAcc(i) {
+  const body = document.getElementById(`body-${i}`);
+  const arr  = document.getElementById(`arr-${i}`);
+  const open = body.classList.toggle('open');
+  arr.classList.toggle('open', open);
+}
+
+let _modalChart = null;
+function showDetail(i) {
+  const r = window._adminRecords[i];
+  if (!r) return;
+  document.getElementById('modal-name').textContent = r.nombre;
+  document.getElementById('modal-sub').innerHTML =
+    `<span class="pill ${({p:'pill-p',f:'pill-f',e:'pill-e'})[r.nivelKey]||'pill-p'}">${r.nivel}</span>
+     &nbsp; ${r.score} puntos &nbsp;·&nbsp; ${r.tienda||'—'} &nbsp;·&nbsp; ${r.rol||'—'}`;
+
+  const modNames = ['CX Fundamentos','Customer Journey','Peak-End Rule','Innovación','Fidelización','Liderazgo','CX Digital','Métricas'];
+  const modPcts  = r.modulos ? r.modulos.map(m=>m.max>0?Math.round(m.score/m.max*100):0) : Array(8).fill(0);
+
+  // Radar chart
+  if (_modalChart) { _modalChart.destroy(); _modalChart=null; }
+  _modalChart = new Chart(document.getElementById('modal-radar'), {
+    type:'radar',
+    data:{
+      labels: modNames,
+      datasets:[{
+        label: r.nombre,
+        data: modPcts,
+        backgroundColor:'rgba(232,64,28,.15)',
+        borderColor:'rgba(232,64,28,.8)',
+        pointBackgroundColor:'#E8401C',
+        pointRadius:4, borderWidth:2
+      }]
+    },
+    options:{
+      scales:{r:{
+        min:0,max:100,
+        ticks:{color:'rgba(255,255,255,.4)',font:{size:9},stepSize:25,backdropColor:'transparent'},
+        grid:{color:'rgba(255,255,255,.1)'},
+        pointLabels:{color:'rgba(255,255,255,.7)',font:{size:10}}
+      }},
+      plugins:{
+        legend:{display:false},
+        datalabels:{display:false}
+      }
+    }
+  });
+
+  // Bar details
+  document.getElementById('modal-bars').innerHTML = modNames.map((nm,mi)=>{
+    const pct = modPcts[mi];
+    const col = pct>=67?'#00d48a':pct>=34?'#66ccff':'#ffb347';
+    return `<div class="modal-bar-row">
+      <div class="modal-bar-lbl">${nm}</div>
+      <div class="modal-bar-track"><div class="modal-bar-fill" style="width:${pct}%;background:linear-gradient(90deg,${col},${col}99)"></div></div>
+      <div class="modal-bar-val" style="color:${col}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('detail-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').style.display = 'none';
+  document.body.style.overflow = '';
 }
 
 function _buildRows(records) {
