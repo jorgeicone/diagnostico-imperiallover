@@ -1767,28 +1767,35 @@ async function exportExcel() {
   }
 }
 
-/* Google Sheets: copia datos al portapapeles y abre sheets.new */
+/* Google Sheets: descarga CSV y abre Google Sheets para importar */
 async function exportGoogleSheets() {
-  toast("⏳ Preparando datos...");
-  const records = (window._adminRecords && window._adminRecords.length)
-    ? window._adminRecords : await loadFromCloud();
-  if (!records.length) return toast("No hay datos para exportar aún");
-  const {hdrs, rows} = _buildRows(records);
-  // TSV para pegar directo en Google Sheets
-  const tsv = [hdrs,...rows].map(r=>r.map(c=>String(c).replace(/\t/g,' ')).join('\t')).join('\n');
+  toast("⏳ Generando archivo para Google Sheets...");
   try {
-    await navigator.clipboard.writeText(tsv);
-    window.open('https://sheets.new','_blank');
-    toast("✅ Datos copiados — en Google Sheets pulsa Ctrl+V o ⌘+V");
-  } catch {
-    // Fallback descarga
-    const escape = c=>`"${String(c).replace(/"/g,'""')}"`;
-    const csv=[hdrs,...rows].map(r=>r.map(escape).join(",")).join("\n");
-    const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
-    const url=URL.createObjectURL(blob);const a=document.createElement("a");
-    a.href=url;a.download=`ImperialLovers_GSheets_${new Date().toISOString().slice(0,10)}.csv`;
-    a.click();URL.revokeObjectURL(url);
-    toast("✅ Descargado — importa en Google Sheets: Archivo → Importar → Subir");
+    const records = (window._adminRecords && window._adminRecords.length)
+      ? window._adminRecords : await loadFromCloud();
+    if (!records.length) return toast("No hay datos para exportar aún");
+
+    const {hdrs, rows} = _buildRows(records);
+    const escape = c => `"${String(c).replace(/"/g,'""')}"`;
+    const csv = [hdrs, ...rows].map(r => r.map(escape).join(",")).join("\n");
+
+    // Descargar CSV
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `ImperialLovers_${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(url); }, 2000);
+
+    // Abrir Google Sheets después de 1 seg para que descargue primero
+    setTimeout(() => window.open('https://sheets.new', '_blank'), 1000);
+
+    toast("✅ CSV descargado — en Google Sheets: Archivo → Importar → Subir el archivo");
+  } catch(e) {
+    console.error("exportGoogleSheets:", e);
+    toast("⚠️ " + (e.message || "Error al exportar"));
   }
 }
 
