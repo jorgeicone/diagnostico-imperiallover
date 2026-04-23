@@ -1767,42 +1767,36 @@ async function exportExcel() {
   }
 }
 
-/* Google Sheets: crea hoja automáticamente via Apps Script */
+/* Google Sheets: form POST a Apps Script — sin CORS */
 async function exportGoogleSheets() {
   const records = (window._adminRecords && window._adminRecords.length)
     ? window._adminRecords : _getLocal();
   if (!records.length) return toast("No hay datos — pulsa Actualizar primero");
 
-  const btn = document.querySelector('[onclick="exportGoogleSheets()"]');
-  const originalText = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ Creando hoja..."; }
-
   try {
     const cfg = await fetch(`https://raw.githubusercontent.com/${GH_REPO}/main/config.json?t=${Date.now()}`).then(r=>r.json());
     const scriptUrl = cfg.gs;
-    if (!scriptUrl) {
-      toast("⚠️ Google Sheets no configurado todavía");
-      return;
-    }
+    if (!scriptUrl) { toast("⚠️ Script no configurado"); return; }
 
     const {hdrs, rows} = _buildRows(records);
     const escape = c => `"${String(c).replace(/"/g,'""')}"`;
     const csv = [hdrs, ...rows].map(r => r.map(escape).join(",")).join("\n");
 
-    const res = await fetch(scriptUrl, {
-      method: "POST",
-      body: csv,
-      headers: {"Content-Type": "text/plain;charset=utf-8"}
-    });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || "Error en el script");
-
-    toast("✅ Hoja creada con " + records.length + " registros — abriendo...");
-    window.open(data.url, "_blank");
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = scriptUrl;
+    form.target = '_blank';
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'csv';
+    input.value = csv;
+    form.appendChild(input);
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+    toast("✅ Abriendo Google Sheets...");
   } catch(e) {
     toast("❌ Error: " + e.message);
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = originalText; }
   }
 }
 
