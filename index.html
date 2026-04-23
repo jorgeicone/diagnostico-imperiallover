@@ -465,6 +465,43 @@
       100%{transform:translateY(105vh) rotate(720deg);opacity:0;}
     }
 
+    /* ── ANALYTICS PANEL ── */
+    .analytics-wrap{margin-bottom:22px;}
+    .an-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+    .an-tab{padding:9px 18px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:8px;color:var(--t2);font-size:.82rem;font-weight:700;cursor:pointer;transition:.2s;font-family:inherit;}
+    .an-tab:hover{border-color:rgba(0,200,255,.4);color:var(--cyan);}
+    .an-tab.active{background:rgba(0,200,255,.1);border-color:rgba(0,200,255,.5);color:var(--cyan);}
+    .an-panel{display:none;}
+    .an-panel.active{display:block;}
+    .charts-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .chart-box{padding:20px;}
+    .chart-title{font-size:.76rem;font-weight:800;color:var(--t2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px;}
+    .mods-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;}
+    .mod-chart-box{padding:16px 18px;}
+    .mod-chart-name{font-size:.73rem;font-weight:800;color:var(--cyan);margin-bottom:10px;}
+    .qs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px;}
+    .q-chart-box{padding:14px 16px;}
+    .q-chart-title{font-size:.7rem;font-weight:700;color:var(--t2);margin-bottom:10px;line-height:1.4;}
+    .ans-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+    .ans-lbl{width:18px;font-size:.75rem;font-weight:900;text-align:center;}
+    .ans-lbl-a{color:#00d48a;}.ans-lbl-b{color:#66ccff;}.ans-lbl-c{color:var(--coral);}
+    .ans-track{flex:1;background:rgba(255,255,255,.07);border-radius:50px;height:9px;overflow:hidden;}
+    .ans-fill{height:100%;border-radius:50px;transition:width .6s ease;}
+    .ans-fill-a{background:linear-gradient(90deg,#00d48a,#00a36b);}
+    .ans-fill-b{background:linear-gradient(90deg,#66ccff,#00a0e0);}
+    .ans-fill-c{background:linear-gradient(90deg,var(--coral),#c73214);}
+    .ans-pct{font-size:.7rem;color:var(--t3);width:30px;text-align:right;}
+    .btn-export-sheets{
+      padding:11px 20px;
+      background:linear-gradient(135deg,#1a73e8,#0d5dbd);
+      color:#fff;border:none;border-radius:10px;
+      font-size:.85rem;font-weight:800;cursor:pointer;
+      transition:.2s;font-family:inherit;
+      display:flex;align-items:center;gap:6px;
+      box-shadow:0 4px 14px rgba(26,115,232,.3);
+    }
+    .btn-export-sheets:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(26,115,232,.45);}
+    @media(max-width:600px){.charts-2col{grid-template-columns:1fr;}}
     @media(max-width:480px){
       .intro-title{font-size:1.8rem;}
       .q-card{padding:22px 18px 18px;}
@@ -641,7 +678,8 @@
         <div class="admin-h1">🏆 Panel ImperialLovers</div>
         <div class="btn-row">
           <button class="btn-refresh" onclick="loadAdmin()">🔄 Actualizar</button>
-          <button class="btn-export" onclick="exportCSV()">📥 Exportar Excel</button>
+          <button class="btn-export" onclick="exportExcel()">📥 Exportar Excel</button>
+          <button class="btn-export-sheets" onclick="exportGoogleSheets()">📊 Google Sheets</button>
           <button class="btn-del" onclick="clearAll()">🗑️ Limpiar</button>
         </div>
       </div>
@@ -657,6 +695,44 @@
       </div>
 
       <div class="stats-grid" id="admin-stats"></div>
+
+      <!-- ── ANALYTICS TABS ── -->
+      <div class="analytics-wrap" id="analytics-wrap" style="display:none">
+        <div class="an-tabs">
+          <button class="an-tab active" onclick="switchTab('dist')">📊 Distribución</button>
+          <button class="an-tab" onclick="switchTab('mods')">📦 Por Módulo</button>
+          <button class="an-tab" onclick="switchTab('qs')">❓ Por Pregunta</button>
+        </div>
+
+        <!-- TAB: Distribución -->
+        <div class="an-panel active" id="an-dist">
+          <div class="charts-2col">
+            <div class="glass chart-box">
+              <div class="chart-title">Distribución de puntajes</div>
+              <canvas id="ch-dist" height="200"></canvas>
+            </div>
+            <div class="glass chart-box">
+              <div class="chart-title">Niveles del grupo</div>
+              <canvas id="ch-levels" height="200"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Por Módulo -->
+        <div class="an-panel" id="an-mods">
+          <div class="glass chart-box" style="margin-bottom:16px">
+            <div class="chart-title">Promedio del grupo por módulo (%)</div>
+            <canvas id="ch-mods-avg" height="140"></canvas>
+          </div>
+          <div class="mods-grid" id="mods-grid"></div>
+        </div>
+
+        <!-- TAB: Por Pregunta -->
+        <div class="an-panel" id="an-qs">
+          <div class="qs-grid" id="qs-grid"></div>
+        </div>
+      </div>
+
       <div class="tbl-wrap">
         <table>
           <thead>
@@ -1122,6 +1198,137 @@ async function loadAdmin() {
   renderAdmin(records);
 }
 
+/* ══════════════════════════════════
+   ANALYTICS
+══════════════════════════════════ */
+let _ci = {}; // chart instances
+
+function destroyCharts() {
+  Object.values(_ci).forEach(c => { try { c.destroy(); } catch {} });
+  _ci = {};
+}
+
+const CHART_SCALE = {
+  x: { ticks:{color:'rgba(255,255,255,.55)',font:{size:10}}, grid:{color:'rgba(255,255,255,.07)'} },
+  y: { ticks:{color:'rgba(255,255,255,.55)',font:{size:10}}, grid:{color:'rgba(255,255,255,.07)'} }
+};
+
+function switchTab(tab) {
+  const tabs = ['dist','mods','qs'];
+  document.querySelectorAll('.an-tab').forEach((btn,i) => btn.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('.an-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('an-' + tab).classList.add('active');
+}
+
+function renderAnalytics(records) {
+  destroyCharts();
+  const wrap = document.getElementById('analytics-wrap');
+  if (!records.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+
+  /* 1 ─ Score distribution histogram */
+  const bins = ['0–20','21–40','41–60','61–80','81–100'];
+  const binCounts = [0,0,0,0,0];
+  records.forEach(r => { binCounts[Math.min(4, Math.floor(r.score/20))]++; });
+  _ci.dist = new Chart(document.getElementById('ch-dist'), {
+    type:'bar',
+    data:{
+      labels:bins,
+      datasets:[{
+        label:'Participantes', data:binCounts, borderRadius:6, borderSkipped:false,
+        backgroundColor:['rgba(255,140,0,.7)','rgba(255,200,60,.7)','rgba(100,190,255,.7)','rgba(0,200,120,.75)','rgba(0,212,138,.9)']
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y, ticks:{...CHART_SCALE.y.ticks, stepSize:1}}}
+    }
+  });
+
+  /* 2 ─ Levels donut */
+  const lc = {p:0,f:0,e:0};
+  records.forEach(r => { if(lc[r.nivelKey]!==undefined) lc[r.nivelKey]++; });
+  _ci.levels = new Chart(document.getElementById('ch-levels'), {
+    type:'doughnut',
+    data:{
+      labels:['🌱 Principiante','⭐ En Formación','🏆 Experto'],
+      datasets:[{data:[lc.p,lc.f,lc.e], backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'], borderWidth:0, hoverOffset:8}]
+    },
+    options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.65)',font:{size:10},boxWidth:10,padding:10}}}}
+  });
+
+  /* 3 ─ Module avg bar */
+  const modSums = Array(8).fill(0);
+  const modMaxes = Array(8).fill(0);
+  records.forEach(r => {
+    if (!r.modulos) return;
+    r.modulos.forEach((m,i) => { modSums[i] += m.score; modMaxes[i] = m.max; });
+  });
+  const modAvgPct = modSums.map((s,i) => modMaxes[i]>0 ? Math.round(s/records.length/modMaxes[i]*100) : 0);
+
+  _ci.modsAvg = new Chart(document.getElementById('ch-mods-avg'), {
+    type:'bar',
+    data:{
+      labels:['M1','M2','M3','M4','M5','M6','M7','M8'],
+      datasets:[{
+        label:'% promedio', data:modAvgPct, borderRadius:6, borderSkipped:false,
+        backgroundColor:modAvgPct.map(v => v>=67?'rgba(0,212,138,.75)':v>=34?'rgba(100,190,255,.75)':'rgba(255,140,0,.75)')
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.parsed.y}%`}}},
+      scales:{x:CHART_SCALE.x, y:{...CHART_SCALE.y,min:0,max:100,ticks:{...CHART_SCALE.y.ticks,callback:v=>v+'%'}}}
+    }
+  });
+
+  /* 4 ─ Per-module donuts */
+  const modNames = ['M1 — CX Fundamentos','M2 — Customer Journey','M3 — Peak-End Rule','M4 — Innovación','M5 — Fidelización','M6 — Liderazgo','M7 — CX Digital','M8 — Métricas'];
+  const modsGrid = document.getElementById('mods-grid');
+  modsGrid.innerHTML = modNames.map((nm,mi) => `
+    <div class="glass mod-chart-box">
+      <div class="mod-chart-name">${nm}</div>
+      <div style="position:relative;height:120px"><canvas id="ch-mod-${mi}"></canvas></div>
+    </div>`).join('');
+
+  modNames.forEach((_,mi) => {
+    const mc = {p:0,f:0,e:0};
+    records.forEach(r => {
+      if (!r.modulos || !r.modulos[mi]) return;
+      const pct = r.modulos[mi].max>0 ? r.modulos[mi].score/r.modulos[mi].max*100 : 0;
+      if(pct<34) mc.p++; else if(pct<67) mc.f++; else mc.e++;
+    });
+    _ci[`mod${mi}`] = new Chart(document.getElementById(`ch-mod-${mi}`), {
+      type:'doughnut',
+      data:{
+        labels:['Principiante','En Formación','Experto'],
+        datasets:[{data:[mc.p,mc.f,mc.e], backgroundColor:['rgba(255,179,71,.85)','rgba(102,204,255,.85)','rgba(0,212,138,.85)'], borderWidth:0}]
+      },
+      options:{plugins:{legend:{position:'bottom',labels:{color:'rgba(255,255,255,.55)',font:{size:9},boxWidth:8,padding:6}}}}
+    });
+  });
+
+  /* 5 ─ Per-question A/B/C bars (CSS, no Chart.js) */
+  const qCounts = Array.from({length:25}, ()=>({A:0,B:0,C:0,t:0}));
+  records.forEach(r => {
+    if (!r.respuestas) return;
+    r.respuestas.forEach((ans,qi) => { if(qi<25){qCounts[qi][ans]=(qCounts[qi][ans]||0)+1; qCounts[qi].t++;} });
+  });
+
+  document.getElementById('qs-grid').innerHTML = qCounts.map((qc,qi) => {
+    const pA = qc.t ? Math.round(qc.A/qc.t*100) : 0;
+    const pB = qc.t ? Math.round(qc.B/qc.t*100) : 0;
+    const pC = qc.t ? Math.round(qc.C/qc.t*100) : 0;
+    const txt = QS[qi] ? QS[qi].q.slice(0,60)+(QS[qi].q.length>60?'…':'') : '';
+    return `<div class="glass q-chart-box">
+      <div class="q-chart-title"><span style="color:var(--coral);font-weight:900">P${qi+1}</span> ${txt}</div>
+      <div class="ans-bar-row"><span class="ans-lbl ans-lbl-a">A</span><div class="ans-track"><div class="ans-fill ans-fill-a" style="width:${pA}%"></div></div><span class="ans-pct">${pA}%</span></div>
+      <div class="ans-bar-row"><span class="ans-lbl ans-lbl-b">B</span><div class="ans-track"><div class="ans-fill ans-fill-b" style="width:${pB}%"></div></div><span class="ans-pct">${pB}%</span></div>
+      <div class="ans-bar-row"><span class="ans-lbl ans-lbl-c">C</span><div class="ans-track"><div class="ans-fill ans-fill-c" style="width:${pC}%"></div></div><span class="ans-pct">${pC}%</span></div>
+      <div style="font-size:.65rem;color:var(--t3);margin-top:4px">${qc.t} respuesta${qc.t!==1?'s':''}</div>
+    </div>`;
+  }).join('');
+}
+
 function renderAdmin(records) {
   // Stats
   const stats = document.getElementById("admin-stats");
@@ -1162,32 +1369,53 @@ function renderAdmin(records) {
     </tr>`;
   }).join("");
   toast("✅ " + records.length + " respuesta(s) desde la nube");
+  renderAnalytics(records);
 }
 
-async function exportCSV() {
+function _buildRows(records) {
+  const hdrs = ["N°","Nombre","Email","Local / Área","Rol","Puntaje","Nivel",
+    "M1-CX Fundamentos","M2-Customer Journey","M3-Peak-End Rule","M4-Innovación",
+    "M5-Fidelización","M6-Liderazgo","M7-CX Digital","M8-Métricas",
+    ...Array.from({length:25},(_,i)=>`P${i+1}`),"Fecha"];
+  const rows = records.map((r,i) => {
+    const mods = r.modulos ? r.modulos.map(m=>`${m.score}/${m.max}`) : Array(8).fill("");
+    return [i+1, r.nombre, r.email, r.tienda||"", r.rol||"", r.score, r.nivel,
+      ...mods, ...(r.respuestas||[]),
+      new Date(r.timestamp).toLocaleString("es-CO")];
+  });
+  return {hdrs, rows};
+}
+
+/* Excel: usa sep=; para que Excel en español abra limpio */
+async function exportExcel() {
   toast("⏳ Descargando datos...");
   const records = await loadFromCloud();
   if (!records.length) return toast("No hay datos para exportar aún");
-
-  const hdrs = ["N°","Nombre","Email","Local/Área","Rol","Score","Nivel",
-    "M1-CX","M2-Journey","M3-PeakEnd","M4-Innovación","M5-Fidelización","M6-Liderazgo","M7-Digital","M8-Métricas",
-    ...Array.from({length:25}, (_,i) => `P${i+1}`), "Fecha"];
-
-  const rows = records.map((r,i) => {
-    const mods = r.modulos ? r.modulos.map(m => `${m.score}/${m.max}`) : Array(8).fill("");
-    const date = new Date(r.timestamp).toLocaleString("es-CO");
-    return [i+1, r.nombre, r.email, r.tienda||"", r.rol||"", r.score, r.nivel, ...mods, ...(r.respuestas||[]), date];
-  });
-
-  const csv = [hdrs, ...rows].map(row => row.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
-  const blob = new Blob(["\uFEFF"+csv], {type:"text/csv;charset=utf-8;"});
+  const {hdrs, rows} = _buildRows(records);
+  const escape = c => `"${String(c).replace(/"/g,'""')}"`;
+  const csv = `sep=;\n` + [hdrs,...rows].map(r=>r.map(escape).join(";")).join("\n");
+  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8;"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `ImperialLovers_Diagnostico_${new Date().toISOString().slice(0,10)}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  toast("✅ Excel descargado — " + records.length + " respuestas");
+  a.href=url; a.download=`ImperialLovers_Excel_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast("✅ Excel listo — " + records.length + " filas");
+}
+
+/* Google Sheets: CSV con coma, sin sep=, sin BOM */
+async function exportGoogleSheets() {
+  toast("⏳ Preparando para Google Sheets...");
+  const records = await loadFromCloud();
+  if (!records.length) return toast("No hay datos para exportar aún");
+  const {hdrs, rows} = _buildRows(records);
+  const escape = c => `"${String(c).replace(/"/g,'""')}"`;
+  const csv = [hdrs,...rows].map(r=>r.map(escape).join(",")).join("\n");
+  const blob = new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href=url; a.download=`ImperialLovers_GSheets_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+  toast("✅ Archivo listo — en Google Sheets: Archivo → Importar → Subir");
 }
 
 function clearAll() {
