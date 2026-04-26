@@ -802,7 +802,6 @@
         <div class="btn-row">
           <button class="btn-refresh" onclick="loadAdmin()">🔄 Actualizar</button>
           <button class="btn-export" onclick="exportExcel()">📥 Exportar Excel</button>
-          <button class="btn-export-sheets" onclick="exportGoogleSheets()">📊 Google Sheets</button>
           <button class="btn-export-sheets" onclick="shareDashboard()" style="background:linear-gradient(135deg,#7b2fff,#5a1fd1);box-shadow:0 4px 14px rgba(123,47,255,.3)">📤 Compartir Dashboard</button>
           <button class="btn-del" onclick="clearAll()">🗑️ Limpiar</button>
         </div>
@@ -1767,12 +1766,6 @@ async function exportExcel() {
   }
 }
 
-/* Google Sheets: abre hoja directamente */
-function exportGoogleSheets() {
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/1VzIiZN4oXYDq8IX-_Uonsk7bJcF5TjlC1fA6_bKcj1E/edit";
-  window.open(SHEET_URL, "_blank");
-  toast("📊 Google Sheets abierto — sincroniza con el botón del script si necesitas datos frescos");
-}
 
 function shareDashboard() {
   const url = location.origin + location.pathname + '?dashboard';
