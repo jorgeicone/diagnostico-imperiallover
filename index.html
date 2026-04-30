@@ -749,9 +749,15 @@
 <!-- ═══ VIEW: DASHBOARD PÚBLICO ═══ -->
 <div id="view-dashboard" class="view">
   <div class="admin-outer">
-    <div style="text-align:center;padding:24px 0 20px">
+    <div style="text-align:center;padding:24px 0 14px">
       <div style="font-size:1.5rem;font-weight:900;background:linear-gradient(135deg,var(--coral),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Dashboard CX 2026</div>
       <p style="color:var(--t2);font-size:.82rem;margin-top:4px">Plaza Imperial × Politécnico Grancolombiano — Solo lectura</p>
+      <button onclick="loadDashboard()" id="dash-refresh-btn" style="margin-top:12px;background:rgba(0,200,255,.08);border:1px solid rgba(0,200,255,.25);color:var(--cyan);border-radius:8px;padding:6px 16px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">🔄 Actualizar datos</button>
+    </div>
+    <!-- ICONE Executive Report (loaded from GitHub) -->
+    <div id="dash-icone-report" style="display:none;background:rgba(212,168,71,.05);border:1px solid rgba(212,168,71,.2);border-radius:14px;padding:18px 20px;margin-bottom:18px">
+      <div style="font-size:.7rem;font-weight:900;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px">📊 Informe Ejecutivo ICONE</div>
+      <div id="dash-icone-content" style="font-size:.83rem;line-height:1.8;color:var(--t2)"></div>
     </div>
     <div class="stats-grid" id="dash-stats" style="margin-bottom:22px"></div>
     <div class="an-tabs" id="dash-tabs">
@@ -863,6 +869,29 @@
         <!-- TAB: Por Pregunta -->
         <div class="an-panel" id="an-qs">
           <div class="qs-grid" id="qs-grid"></div>
+        </div>
+      </div>
+
+      <!-- ── INFORME ICONE ── -->
+      <div class="glass" id="icone-section" style="border-radius:14px;padding:20px;margin-bottom:18px;border:1px solid rgba(212,168,71,.2);display:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+          <div>
+            <div style="font-size:1rem;font-weight:900;color:var(--gold)">📊 Informe Ejecutivo ICONE</div>
+            <div style="font-size:.75rem;color:var(--t3);margin-top:2px">Análisis narrativo del grupo — genera, refina y publica en el dashboard</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button onclick="generateIconeReport()" style="background:rgba(212,168,71,.15);border:1px solid rgba(212,168,71,.4);color:var(--gold);border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">✨ Generar / Actualizar</button>
+            <button onclick="publishIconeReport()" id="btn-publish-icone" style="background:rgba(0,212,138,.1);border:1px solid rgba(0,212,138,.3);color:var(--green);border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;display:none">☁️ Publicar en Dashboard</button>
+          </div>
+        </div>
+        <div id="icone-preview" style="background:rgba(0,0,0,.2);border-radius:10px;padding:16px;font-size:.82rem;line-height:1.8;color:var(--t2);display:none;white-space:pre-wrap"></div>
+        <div id="icone-chat" style="margin-top:16px;display:none">
+          <div style="font-size:.72rem;color:var(--t3);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.8px">💬 Refinar informe</div>
+          <div id="icone-chat-history" style="max-height:180px;overflow-y:auto;margin-bottom:8px"></div>
+          <div style="display:flex;gap:8px">
+            <input id="icone-chat-input" type="text" placeholder="Ej: Hazlo más conciso, enfócate en fortalezas, tono formal…" style="flex:1;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15);border-radius:8px;padding:9px 14px;color:var(--t1);font-size:.82rem;font-family:inherit" onkeydown="if(event.key==='Enter')sendIconeChat()"/>
+            <button onclick="sendIconeChat()" style="background:rgba(232,64,28,.15);border:1px solid rgba(232,64,28,.4);color:var(--coral);border-radius:8px;padding:9px 14px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit">Enviar →</button>
+          </div>
         </div>
       </div>
 
@@ -1374,8 +1403,8 @@ const CHART_SCALE = {
 
 function switchTab(tab) {
   const tabs = ['dist','mods','qs'];
-  document.querySelectorAll('.an-tab').forEach((btn,i) => btn.classList.toggle('active', tabs[i] === tab));
-  document.querySelectorAll('.an-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('#analytics-wrap .an-tab').forEach((btn,i) => btn.classList.toggle('active', tabs[i] === tab));
+  document.querySelectorAll('#analytics-wrap .an-panel').forEach(p => p.classList.remove('active'));
   document.getElementById('an-' + tab).classList.add('active');
 }
 
@@ -1631,6 +1660,8 @@ function renderAdmin(records) {
 
   toast("✅ " + records.length + " respuesta(s) desde la nube");
   renderAnalytics(records);
+  // Show ICONE report section
+  document.getElementById('icone-section').style.display = 'block';
 }
 
 function toggleParticipants() {
@@ -1776,6 +1807,141 @@ function shareDashboard() {
   });
 }
 
+/* ══════════════════════════════════
+   ICONE REPORT
+══════════════════════════════════ */
+let _iconeReport = null;
+
+function generateIconeReport() {
+  const records = window._adminRecords;
+  if (!records || !records.length) { toast('⚠️ Carga los datos primero (Actualizar)'); return; }
+
+  const total = records.length;
+  const avg = Math.round(records.reduce((s,r)=>s+r.score,0)/total);
+  const lc = {p:0,f:0,e:0};
+  records.forEach(r=>{ if(lc[r.nivelKey]!==undefined) lc[r.nivelKey]++; });
+
+  const ms=Array(8).fill(0), mx=Array(8).fill(0);
+  records.forEach(r=>{ if(r.modulos) r.modulos.forEach((m,i)=>{ ms[i]+=m.score; mx[i]=m.max; }); });
+  const mp=ms.map((s,i)=>mx[i]>0?Math.round(s/total/mx[i]*100):0);
+  const modNms=['CX Fundamentos','Customer Journey','Peak-End Rule','Innovación','Fidelización','Liderazgo','CX Digital','Métricas'];
+  const modWithPct = modNms.map((n,i)=>({n,p:mp[i]})).sort((a,b)=>b.p-a.p);
+  const top3 = modWithPct.slice(0,3);
+  const bot3 = [...modWithPct].sort((a,b)=>a.p-b.p).slice(0,3);
+
+  const nivelGrupo = avg>=67?'Experto':avg>=34?'En Formación':'Principiante';
+  const recomTxt = nivelGrupo==='Experto'
+    ? 'El equipo demuestra dominio sólido en experiencia del cliente. Se recomienda enfocarse en innovación y métricas avanzadas para consolidar la excelencia.'
+    : nivelGrupo==='En Formación'
+    ? 'El equipo está en proceso de consolidación. Se recomienda reforzar los módulos con menor puntaje mediante talleres prácticos y casos reales.'
+    : 'El equipo requiere refuerzo en los fundamentos de CX. Se recomienda iniciar con customer journey y herramientas base antes de avanzar a temas avanzados.';
+
+  _iconeReport = '**Diagnóstico CX 2026 — Plaza Imperial × Politécnico Grancolombiano**\n\n'
+    + 'El grupo completó el diagnóstico con **' + total + ' participantes**. El promedio general fue de **' + avg + '/100**, ubicando al equipo en el nivel **' + nivelGrupo + '**.\n\n'
+    + '**Composición del grupo:**\n'
+    + '• 🌱 Principiante: ' + lc.p + ' persona(s) — ' + Math.round(lc.p/total*100) + '%\n'
+    + '• ⭐ En Formación: ' + lc.f + ' persona(s) — ' + Math.round(lc.f/total*100) + '%\n'
+    + '• 🏆 Experto: ' + lc.e + ' persona(s) — ' + Math.round(lc.e/total*100) + '%\n\n'
+    + '**Fortalezas del grupo (módulos con mayor dominio):**\n'
+    + '• ' + top3[0].n + ': ' + top3[0].p + '%\n'
+    + '• ' + top3[1].n + ': ' + top3[1].p + '%\n'
+    + '• ' + top3[2].n + ': ' + top3[2].p + '%\n\n'
+    + '**Áreas prioritarias de desarrollo:**\n'
+    + '• ' + bot3[0].n + ': ' + bot3[0].p + '%\n'
+    + '• ' + bot3[1].n + ': ' + bot3[1].p + '%\n'
+    + '• ' + bot3[2].n + ': ' + bot3[2].p + '%\n\n'
+    + '**Recomendación estratégica:** ' + recomTxt;
+
+  const preview = document.getElementById('icone-preview');
+  preview.innerHTML = _iconeReport
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+  preview.style.display = 'block';
+  document.getElementById('icone-chat').style.display = 'block';
+  document.getElementById('btn-publish-icone').style.display = '';
+  toast('✅ Informe generado — refínalo con el chat y luego publícalo');
+}
+
+function sendIconeChat() {
+  const input = document.getElementById('icone-chat-input');
+  const msg = input.value.trim();
+  if (!msg || !_iconeReport) return;
+  input.value = '';
+
+  const history = document.getElementById('icone-chat-history');
+  history.innerHTML += '<div style="background:rgba(232,64,28,.12);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:.78rem;color:var(--t1)">👤 ' + msg + '</div>';
+
+  _iconeReport = applyIconeInstruction(_iconeReport, msg);
+
+  const preview = document.getElementById('icone-preview');
+  preview.innerHTML = _iconeReport
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n/g,'<br>');
+
+  history.innerHTML += '<div style="background:rgba(0,200,255,.08);border-radius:6px;padding:6px 10px;margin-bottom:6px;font-size:.78rem;color:var(--cyan)">🤖 Informe actualizado ✓</div>';
+  history.scrollTop = history.scrollHeight;
+}
+
+function applyIconeInstruction(report, instruction) {
+  const low = instruction.toLowerCase();
+  if (low.includes('conciso') || low.includes('corto') || low.includes('breve')) {
+    return report.split('\n').filter(l=>l.trim().startsWith('**')||l.trim().startsWith('•')).join('\n');
+  }
+  if (low.includes('formal') || low.includes('ejecutiv')) {
+    return report.replace(/[🌱⭐🏆👤🤖•]/g,'').replace(/\*\*(.*?)\*\*/g,'$1').trim();
+  }
+  if (low.includes('recomend')) {
+    const idx = report.indexOf('Recomendación');
+    return idx>=0 ? report.slice(idx) : report;
+  }
+  if (low.includes('fortalez')) {
+    const idx = report.indexOf('Fortalezas');
+    const end = report.indexOf('Áreas');
+    return (idx>=0&&end>=0) ? report.slice(idx,end).trim() : report;
+  }
+  if (low.includes('área')||low.includes('area')||low.includes('mejorar')||low.includes('desarrollo')) {
+    const idx = report.indexOf('Áreas');
+    return idx>=0 ? report.slice(idx).trim() : report;
+  }
+  return report + '\n\n**Nota del facilitador:** ' + instruction;
+}
+
+async function publishIconeReport() {
+  if (!_iconeReport) return;
+  const btn = document.getElementById('btn-publish-icone');
+  btn.textContent = '⏳ Publicando...';
+  btn.disabled = true;
+  try {
+    const token = await getToken();
+    if (!token) throw new Error('no token');
+    let sha = '';
+    const chk = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/icone-report.json',
+      { headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github.v3+json' } }
+    );
+    if (chk.ok) { const d = await chk.json(); sha = d.sha || ''; }
+    const content = JSON.stringify({ report: _iconeReport, updated: new Date().toISOString() });
+    const bytes = new TextEncoder().encode(content);
+    let binary = '';
+    bytes.forEach(b => binary += String.fromCharCode(b));
+    const b64 = btoa(binary);
+    const payload = { message: 'Informe ICONE actualizado', content: b64 };
+    if (sha) payload.sha = sha;
+    const res = await fetch(
+      'https://api.github.com/repos/' + GH_REPO + '/contents/icone-report.json',
+      { method: 'PUT', headers: { Authorization: 'token ' + token, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }
+    );
+    if (!res.ok) throw new Error(await res.text());
+    toast('✅ Informe publicado — ya aparece en el dashboard compartido');
+    btn.textContent = '✅ Publicado';
+    setTimeout(() => { btn.textContent = '☁️ Publicar en Dashboard'; btn.disabled = false; }, 3000);
+  } catch(e) {
+    toast('⚠️ Error: ' + e.message);
+    btn.textContent = '☁️ Publicar en Dashboard';
+    btn.disabled = false;
+  }
+}
+
 function switchDashTab(tab) {
   const tabs = ['dist','mods','qs'];
   document.querySelectorAll('#dash-tabs .an-tab').forEach((btn,i) => btn.classList.toggle('active', tabs[i]===tab));
@@ -1785,14 +1951,36 @@ function switchDashTab(tab) {
 
 let _dci = {};
 async function loadDashboard() {
+  const btn = document.getElementById('dash-refresh-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Actualizando...'; }
   // Show cached stats instantly
   const cached = _getLocal();
   if (cached.length) renderDashboard(cached);
 
   toast("☁️ Cargando datos del grupo...");
-  const records = await loadFromCloud();
+  const [records] = await Promise.all([loadFromCloud(), loadIconeReportForDashboard()]);
   renderDashboard(records);
   toast("✅ Dashboard actualizado — " + records.length + " participantes");
+  if (btn) { btn.disabled = false; btn.textContent = '🔄 Actualizar datos'; }
+}
+
+async function loadIconeReportForDashboard() {
+  try {
+    const res = await fetch(
+      'https://raw.githubusercontent.com/' + GH_REPO + '/main/icone-report.json?t=' + Date.now()
+    );
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data.report) return;
+    const el = document.getElementById('dash-icone-content');
+    const container = document.getElementById('dash-icone-report');
+    if (el && container) {
+      el.innerHTML = data.report
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+      container.style.display = 'block';
+    }
+  } catch {}
 }
 
 function renderDashboard(records) {
